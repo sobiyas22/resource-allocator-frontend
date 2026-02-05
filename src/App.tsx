@@ -1,0 +1,78 @@
+import React from 'react'
+import { Routes, Route, Navigate } from 'react-router-dom'
+import LandingPage from './pages/Landing'
+import LoginPage from './pages/Login'
+import ProtectedRoute from './routes/ProtectedRoute'
+import AdminLayout from './pages/admin/AdminLayout'
+import AdminUsers from './pages/admin/Users'
+import AdminResources from './pages/admin/Resources'
+import AdminBookings from './pages/admin/Bookings'
+import EmployeeLayout from './pages/employee/EmployeeLayout'
+import EmployeeBooking from './pages/employee/BookingPage'
+import EmployeeHistory from './pages/employee/History'
+import DashboardRedirect from './pages/DashboardRedirect' // keeps /dashboard redirect behavior
+import Unauthorized from './pages/Unauthorized'
+import Profile from './pages/Profile'
+
+const App: React.FC = () => {
+  return (
+    <Routes>
+      <Route path="/" element={<LandingPage />} />
+      <Route path="/login" element={<LoginPage />} />
+
+      {/* Generic /dashboard path -> redirect to role-specific dashboard */}
+      <Route
+        path="/dashboard"
+        element={
+          <ProtectedRoute>
+            <DashboardRedirect />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Admin nested routes */}
+      <Route
+        path="/dashboard/admin/*"
+        element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <AdminLayout />
+          </ProtectedRoute>
+        }
+      >
+        <Route index element={<Navigate to="users" replace />} />
+        <Route path="users" element={<AdminUsers />} />
+        <Route path="resources" element={<AdminResources />} />
+        <Route path="bookings" element={<AdminBookings />} />
+      </Route>
+
+      {/* Employee nested routes */}
+      <Route
+        path="/dashboard/employee/*"
+        element={
+          <ProtectedRoute allowedRoles={['employee']}>
+            <EmployeeLayout />
+          </ProtectedRoute>
+        }
+      >
+        <Route index element={<Navigate to="book" replace />} />
+        <Route path="book" element={<EmployeeBooking />} />
+        <Route path="history" element={<EmployeeHistory />} />
+      </Route>
+
+      {/* Profile */}
+      <Route
+        path="/profile"
+        element={
+          <ProtectedRoute>
+            <Profile />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route path="/unauthorized" element={<Unauthorized />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  )
+}
+
+export default App
