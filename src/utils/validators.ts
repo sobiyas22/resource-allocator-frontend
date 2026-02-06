@@ -39,3 +39,23 @@ export const resourceSchema = z.object({
 })
 
 export type ResourceFormValues = z.infer<typeof resourceSchema>
+
+
+
+// Booking Schema for Create Booking Form
+export const bookingSchema = z.object({
+  resource_id: z.number({ message: 'Resource is required' }),
+  start_time: z.string().min(1, { message: 'Start time is required' }),
+  end_time: z.string().min(1, { message: 'End time is required' })
+})
+
+export type BookingFormValues = z.infer<typeof bookingSchema>
+
+// Booking Approval Schema
+export const bookingApprovalSchema = z.object({
+  status: z.enum(['approved', 'rejected'], { message: 'Status must be approved or rejected' }),
+  admin_note: z.string().optional()
+})
+
+export type BookingApprovalFormValues = z.infer<typeof bookingApprovalSchema>
+

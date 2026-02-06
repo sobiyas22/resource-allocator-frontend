@@ -6,10 +6,11 @@ import ProtectedRoute from './routes/ProtectedRoute'
 import AdminLayout from './pages/admin/AdminLayout'
 import AdminUsers from './pages/admin/Users'
 import AdminResources from './pages/admin/Resources'
-import AdminBookings from './pages/admin/Bookings'
+import Bookings from './pages/admin/Bookings'
 import EmployeeLayout from './pages/employee/EmployeeLayout'
-import EmployeeBooking from './pages/employee/BookingPage'
-import EmployeeHistory from './pages/employee/History'
+import BookingHistory from './pages/employee/BookingHistory'
+import BookResource from './pages/employee/BookResource'
+import EmployeeDashboard from './pages/employee/EmployeeDashboard'
 import DashboardRedirect from './pages/DashboardRedirect' // keeps /dashboard redirect behavior
 import Unauthorized from './pages/Unauthorized'
 import Profile from './pages/Profile'
@@ -42,7 +43,7 @@ const App: React.FC = () => {
         <Route index element={<Navigate to="users" replace />} />
         <Route path="users" element={<AdminUsers />} />
         <Route path="resources" element={<AdminResources />} />
-        <Route path="bookings" element={<AdminBookings />} />
+        <Route path="bookings" element={<Bookings />} />
       </Route>
 
       {/* Employee nested routes */}
@@ -53,11 +54,13 @@ const App: React.FC = () => {
             <EmployeeLayout />
           </ProtectedRoute>
         }
-      >
-        <Route index element={<Navigate to="book" replace />} />
-        <Route path="book" element={<EmployeeBooking />} />
-        <Route path="history" element={<EmployeeHistory />} />
+      />
+      <Route path="/dashboard/employee" element={<EmployeeLayout />}>
+        <Route index element={<EmployeeDashboard />} />
+        <Route path="book" element={<BookResource />} />
+        <Route path="history" element={<BookingHistory />} />
       </Route>
+
 
       {/* Profile */}
       <Route

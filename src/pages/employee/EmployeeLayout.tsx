@@ -3,25 +3,59 @@ import { NavLink, Outlet } from 'react-router-dom'
 import Header from '../../components/Header'
 
 const linkClass = (isActive: boolean) =>
-  `block px-3 py-2 rounded-md ${isActive ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-gray-100'}`
+  `block px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${
+    isActive 
+      ? 'bg-gray-900 text-white shadow-md' 
+      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+  }`
 
 const EmployeeLayout: React.FC = () => {
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col bg-linear-to-br from-gray-50 via-gray-100 to-gray-50">
       <Header />
       <div className="flex flex-1">
-        <aside className="w-64 bg-white border-r p-4">
-          <h3 className="text-lg font-semibold mb-4">Employee</h3>
+        <aside className="w-64 bg-white border-r border-gray-200 p-6 shadow-sm">
+          <h3 
+            className="text-xl font-bold mb-6 text-gray-900" 
+            style={{ fontFamily: "'Playfair Display', serif" }}
+          >
+            Employee Dashboard
+          </h3>
           <nav className="flex flex-col gap-2">
-            <NavLink to="/dashboard/employee/book" className={({ isActive }) => linkClass(isActive)}>Book Resource</NavLink>
-            <NavLink to="/dashboard/employee/history" className={({ isActive }) => linkClass(isActive)}>Booking History</NavLink>
+            <NavLink 
+              to="/dashboard/employee" 
+              end
+              className={({ isActive }) => linkClass(isActive)}
+            >
+              My Bookings
+            </NavLink>
+            <NavLink 
+              to="/dashboard/employee/book" 
+              className={({ isActive }) => linkClass(isActive)}
+            >
+              Book Resource
+            </NavLink>
+            <NavLink 
+              to="/dashboard/employee/history" 
+              className={({ isActive }) => linkClass(isActive)}
+            >
+              Booking History
+            </NavLink>
           </nav>
         </aside>
 
-        <main className="flex-1 p-6 bg-gray-50">
+        <main className="flex-1 p-8 overflow-auto">
           <Outlet />
         </main>
       </div>
+
+      {/* Google Fonts */}
+      <link rel="preconnect" href="https://fonts.googleapis.com" />
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+      <link 
+        href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&display=swap" 
+        rel="stylesheet" 
+      />
     </div>
   )
 }
