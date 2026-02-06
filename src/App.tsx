@@ -9,7 +9,7 @@ import AdminResources from './pages/admin/Resources'
 import Bookings from './pages/admin/Bookings'
 import EmployeeLayout from './pages/employee/EmployeeLayout'
 import BookingHistory from './pages/employee/BookingHistory'
-import BookResource from './pages/employee/BookResource'
+import BookResource from './pages/BookResource'
 import EmployeeDashboard from './pages/employee/EmployeeDashboard'
 import DashboardRedirect from './pages/DashboardRedirect' // keeps /dashboard redirect behavior
 import Unauthorized from './pages/Unauthorized'
@@ -40,9 +40,10 @@ const App: React.FC = () => {
           </ProtectedRoute>
         }
       >
-        <Route index element={<Navigate to="users" replace />} />
+        <Route index element={<Navigate to="bookings" replace />} />
         <Route path="users" element={<AdminUsers />} />
         <Route path="resources" element={<AdminResources />} />
+        <Route path="book" element={<BookResource />} />
         <Route path="bookings" element={<Bookings />} />
       </Route>
 

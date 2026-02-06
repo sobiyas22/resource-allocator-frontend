@@ -19,15 +19,16 @@ const AdminLayout: React.FC = () => {
             Admin Panel
           </h3>
           <nav className="flex flex-col gap-2">
+            <NavLink to="/dashboard/admin/bookings" className={({ isActive }) => linkClass(isActive)}>
+              Manage Bookings
+            </NavLink>
             <NavLink to="/dashboard/admin/users" className={({ isActive }) => linkClass(isActive)}>
               User Management
             </NavLink>
             <NavLink to="/dashboard/admin/resources" className={({ isActive }) => linkClass(isActive)}>
               Manage Resources
             </NavLink>
-            <NavLink to="/dashboard/admin/bookings" className={({ isActive }) => linkClass(isActive)}>
-              Bookings
-            </NavLink>
+            
           </nav>
         </aside>
 

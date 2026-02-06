@@ -26,7 +26,7 @@ import {
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Clock, CheckCircle, XCircle, Eye, Calendar, User, AlertTriangle, Trash2 } from 'lucide-react'
-
+import { useNavigate } from 'react-router-dom'
 interface Booking {
   id: number
   resource_id: number
@@ -205,7 +205,7 @@ const Bookings: React.FC = () => {
       setMessage({ type: 'error', text: 'Failed to fetch booking details' })
     }
   }
-
+  const navigate = useNavigate()
   const filteredBookings = activeTab === 'all' 
     ? bookings 
     : bookings.filter(b => b.status === activeTab)
@@ -251,7 +251,8 @@ const Bookings: React.FC = () => {
             <AlertTriangle className="w-4 h-4 mr-2" />
             Release Expired
           </Button>
-          <Button className="bg-gray-900 hover:bg-gray-800 text-white">
+          <Button className="bg-gray-900 hover:bg-gray-800 text-white"
+              onClick={() => navigate('/dashboard/admin/book')}>
             <Calendar className="w-4 h-4 mr-2" />
             New Booking
           </Button>
