@@ -1,32 +1,40 @@
 import React, { useEffect } from 'react'
+import { Navigate } from 'react-router-dom'
 import { useAuth } from '../store/authStore'
-import { Navigate, useLocation } from 'react-router-dom'
+import { useAutoLogout } from '../hooks/AutoLogout'
 import { Role } from '../types/auth'
 
-type Props = {
+interface ProtectedRouteProps {
   children: React.ReactNode
-  allowedRoles?: Role[] // if omitted, any authenticated user can access
+  allowedRoles?: Role[]
 }
 
-const ProtectedRoute: React.FC<Props> = ({ children, allowedRoles }) => {
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
+  children, 
+  allowedRoles 
+}) => {
   const token = useAuth(state => state.token)
   const user = useAuth(state => state.user)
   const loadFromStorage = useAuth(state => state.loadFromStorage)
-  const location = useLocation()
+  const isTokenExpired = useAuth(state => state.isTokenExpired)
+
+  useAutoLogout()
 
   useEffect(() => {
     loadFromStorage()
   }, [loadFromStorage])
 
-  if (!token) {
-    // Not authenticated -> send to login
-    return <Navigate to="/login" state={{ from: location }} replace />
+  // Check if token is expired
+  if (isTokenExpired()) {
+    return <Navigate to="/login" replace />
   }
 
-  if (allowedRoles && user && !allowedRoles.includes(user.role)) {
-    // Authenticated but not authorized -> redirect to their own dashboard
-    const redirectTo = user.role === 'admin' ? '/dashboard/admin' : '/dashboard/employee'
-    return <Navigate to={redirectTo} replace />
+  if (!token || !user) {
+    return <Navigate to="/login" replace />
+  }
+
+  if (allowedRoles && !allowedRoles.includes(user.role)) {
+    return <Navigate to="/unauthorized" replace />
   }
 
   return <>{children}</>

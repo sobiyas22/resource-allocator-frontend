@@ -1,45 +1,94 @@
-import { getAuth } from '../store//authStore'
+import axios, { AxiosError, AxiosRequestConfig } from 'axios'
+import config from '../config'
+import { useAuth } from '../store/authStore'
 
-const BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api/v1'
-
-type RequestInitExtended = RequestInit & { body?: any }
-
-async function request<T>(path: string, opts: RequestInitExtended = {}): Promise<T> {
-  const url = `${BASE}${path}`
-  const token = getAuth().token
-
-  const headers: HeadersInit = {
+const apiClient = axios.create({
+  baseURL: config.apiBaseUrl,
+  timeout: config.apiTimeout,
+  headers: {
     'Content-Type': 'application/json',
-    ...(opts.headers as Record<string, string> | undefined),
+  },
+})
+
+// Request interceptor - Add auth token
+apiClient.interceptors.request.use(
+  (requestConfig:any) => {
+    const token = useAuth.getState().token
+    if (token && requestConfig.headers) {
+      requestConfig.headers.Authorization = `Bearer ${token}`
+    }
+    return requestConfig
+  },
+  (error:any) => Promise.reject(error)
+)
+
+// Response interceptor - Handle errors & token refresh
+apiClient.interceptors.response.use(
+  (response:any) => response,
+  async (error: AxiosError) => {
+    const originalRequest = error.config as AxiosRequestConfig & { _retry?: boolean }
+
+    // Handle 401 Unauthorized - Token expired
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true
+
+      // Check if token is expired
+      const { expires_at, logout } = useAuth.getState()
+      if (expires_at) {
+        const expiryTime = new Date(expires_at).getTime()
+        const now = Date.now()
+
+        if (now >= expiryTime) {
+          // Token expired, logout user
+          logout()
+          window.location.href = '/login'
+          return Promise.reject(new Error('Session expired. Please login again.'))
+        }
+      }
+    }
+
+    // Handle network errors
+    if (!error.response) {
+      return Promise.reject(new Error('Network error. Please check your connection.'))
+    }
+
+    // Handle other errors
+    const errorMessage = 
+      (error.response?.data as any)?.error || 
+      (error.response?.data as any)?.message ||
+      error.message ||
+      'An unexpected error occurred'
+
+    return Promise.reject(new Error(errorMessage))
   }
+)
 
-  if (token) headers['Authorization'] = `Bearer ${token}`
-
-  const res = await fetch(url, {
-    ...opts,
-    headers,
-    body: opts.body ? JSON.stringify(opts.body) : undefined,
-  })
-
-  if (!res.ok) {
-    const text = await res.text()
-    throw new Error(text || res.statusText)
-  }
-
-  const contentType = res.headers.get('content-type')
-  if (contentType && contentType.includes('application/json')) {
-    return (await res.json()) as T
-  }
-
-  // For DELETE / 204 responses with no body
-  return {} as T
-}
-
-
+// API helper functions
 export const api = {
-  post: <T = any>(path: string, body?: any) => request<T>(path, { method: 'POST', body }),
-  get: <T = any>(path: string) => request<T>(path, { method: 'GET' }),
-  put: <T = any>(path: string, body?: any) => request<T>(path, { method: 'PUT', body }),
-  patch: <T = any>(path: string, body?: any) => request<T>(path, { method: 'PATCH', body }),
-  del: <T = any>(path: string) => request<T>(path, { method: 'DELETE' })
+  get: async <T = any>(url: string, config?: AxiosRequestConfig): Promise<T> => {
+    const response = await apiClient.get<T>(url, config)
+    return response.data
+  },
+
+  post: async <T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> => {
+    const response = await apiClient.post<T>(url, data, config)
+    return response.data
+  },
+
+  patch: async <T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> => {
+    const response = await apiClient.patch<T>(url, data, config)
+    return response.data
+  },
+
+  put: async <T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> => {
+    const response = await apiClient.put<T>(url, data, config)
+    return response.data
+  },
+
+  del: async <T = any>(url: string, config?: AxiosRequestConfig): Promise<T> => {
+    const response = await apiClient.delete<T>(url, config)
+    return response.data
+  },
 }
+
+export default apiClient

@@ -14,6 +14,7 @@ import EmployeeDashboard from './pages/employee/EmployeeDashboard'
 import DashboardRedirect from './pages/DashboardRedirect' // keeps /dashboard redirect behavior
 import Unauthorized from './pages/Unauthorized'
 import Profile from './pages/Profile'
+import { Role } from './types/auth'
 
 const App: React.FC = () => {
   return (
@@ -35,7 +36,7 @@ const App: React.FC = () => {
       <Route
         path="/dashboard/admin/*"
         element={
-          <ProtectedRoute allowedRoles={['admin']}>
+          <ProtectedRoute allowedRoles={[Role.Admin]}>
             <AdminLayout />
           </ProtectedRoute>
         }
@@ -51,7 +52,7 @@ const App: React.FC = () => {
       <Route
         path="/dashboard/employee/*"
         element={
-          <ProtectedRoute allowedRoles={['employee']}>
+          <ProtectedRoute allowedRoles={[Role.Employee]}>
             <EmployeeLayout />
           </ProtectedRoute>
         }

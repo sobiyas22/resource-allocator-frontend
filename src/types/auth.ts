@@ -1,7 +1,10 @@
-export type Role = 'admin' | 'employee'
+export enum Role {
+  Admin = 'admin',
+  Employee = 'employee',
+}
 
 export interface User {
-  employee_id: string
+  employee_id?: string
   name: string
   email: string
   role: Role
