@@ -3,10 +3,9 @@ import { NavLink, Outlet } from 'react-router-dom'
 import Header from '../../components/Header'
 
 const linkClass = (isActive: boolean) =>
-  `block px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${
-    isActive 
-      ? 'bg-gray-900 text-white shadow-md' 
-      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+  `block px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${isActive
+    ? 'bg-gray-900 text-white shadow-md'
+    : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
   }`
 
 const AdminLayout: React.FC = () => {
@@ -19,6 +18,9 @@ const AdminLayout: React.FC = () => {
             Admin Panel
           </h3>
           <nav className="flex flex-col gap-2">
+            <NavLink to="/dashboard/admin/overview" className={({ isActive }) => linkClass(isActive)}>
+              Dashboard
+            </NavLink>
             <NavLink to="/dashboard/admin/bookings" className={({ isActive }) => linkClass(isActive)}>
               Manage Bookings
             </NavLink>
@@ -28,7 +30,7 @@ const AdminLayout: React.FC = () => {
             <NavLink to="/dashboard/admin/resources" className={({ isActive }) => linkClass(isActive)}>
               Manage Resources
             </NavLink>
-            
+
           </nav>
         </aside>
 
@@ -40,9 +42,9 @@ const AdminLayout: React.FC = () => {
       {/* Google Fonts */}
       <link rel="preconnect" href="https://fonts.googleapis.com" />
       <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-      <link 
-        href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&display=swap" 
-        rel="stylesheet" 
+      <link
+        href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&display=swap"
+        rel="stylesheet"
       />
     </div>
   )

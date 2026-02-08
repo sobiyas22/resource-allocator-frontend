@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { api } from '../../lib/api'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -18,7 +18,22 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Calendar, Clock, Eye, CheckCircle, XCircle, MapPin } from 'lucide-react'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import { Calendar, Clock, Eye, CheckCircle, XCircle, MapPin, LogIn, Trash2 } from 'lucide-react'
+import { toast } from 'sonner'
+import { Breadcrumbs } from '../../components/Breadcrumbs'
+import { TableSkeleton } from '../../components/TableSkeleton'
+import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
+import dayjs from 'dayjs'
 
 interface Booking {
   id: number
@@ -37,25 +52,46 @@ interface Booking {
   }
 }
 
-type FilterStatus = 'all' | 'pending' | 'approved' | 'rejected' | 'checked_in' | 'completed' | 'cancelled'
+type FilterStatus = 'all' | 'active' | 'past'
+
+const statusConfig = {
+  pending: { color: 'bg-amber-50 text-amber-700 border-amber-300' },
+  approved: { color: 'bg-indigo-50 text-indigo-700 border-indigo-300' },
+  rejected: { color: 'bg-rose-50 text-rose-700 border-rose-300' },
+  checked_in: { color: 'bg-emerald-50 text-emerald-700 border-emerald-300' },
+  completed: { color: 'bg-purple-50 text-purple-700 border-purple-300' },
+  cancelled: { color: 'bg-gray-50 text-gray-600 border-gray-300' },
+}
 
 const BookingHistory: React.FC = () => {
   const [bookings, setBookings] = useState<Booking[]>([])
   const [loading, setLoading] = useState(false)
-  const [filterStatus, setFilterStatus] = useState<FilterStatus>('all')
+  const [filter, setFilter] = useState<FilterStatus>('all')
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
   const [openView, setOpenView] = useState(false)
+  const [openCheckIn, setOpenCheckIn] = useState(false)
+  const [openCancel, setOpenCancel] = useState(false)
+  const [isProcessing, setIsProcessing] = useState(false)
+
+  useKeyboardShortcuts([
+    {
+      key: 'Escape',
+      callback: () => {
+        if (openView) setOpenView(false)
+        if (openCheckIn) setOpenCheckIn(false)
+        if (openCancel) setOpenCancel(false)
+      }
+    }
+  ])
 
   async function fetchBookings() {
     setLoading(true)
     try {
       const res = await api.get<{ bookings: Booking[] }>('/bookings')
-      const allBookings = (res.bookings || []).sort(
-        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-      )
-      setBookings(allBookings)
+      setBookings(res.bookings || [])
     } catch (err: any) {
-      console.error('Failed to fetch bookings:', err)
+      toast.error('Failed to load bookings')
+      setBookings([])
     } finally {
       setLoading(false)
     }
@@ -65,162 +101,219 @@ const BookingHistory: React.FC = () => {
     fetchBookings()
   }, [])
 
-  async function onViewDetails(booking: Booking) {
+  const filteredBookings = bookings.filter(b => {
+    if (filter === 'active') {
+      return ['pending', 'approved', 'checked_in'].includes(b.status) && 
+             dayjs(b.start_time).isAfter(dayjs())
+    }
+    if (filter === 'past') {
+      return ['completed', 'rejected', 'cancelled'].includes(b.status) ||
+             dayjs(b.end_time).isBefore(dayjs())
+    }
+    return true
+  })
+
+  async function handleCheckIn(booking: Booking) {
+    setIsProcessing(true)
     try {
-      const res = await api.get<Booking>(`/bookings/${booking.id}`)
-      setSelectedBooking(res)
-      setOpenView(true)
+      setBookings(prev => prev.map(b => 
+        b.id === booking.id ? { ...b, status: 'checked_in', checked_in_at: new Date().toISOString() } : b
+      ))
+      setOpenCheckIn(false)
+      toast.success('Checking in...')
+
+      await api.post(`/bookings/${booking.id}/check_in`)
+      await fetchBookings()
+      toast.success('Checked in successfully!')
     } catch (err: any) {
-      console.error('Failed to fetch booking details')
+      await fetchBookings()
+      toast.error(err.message || 'Failed to check in')
+    } finally {
+      setIsProcessing(false)
     }
   }
 
-  const filteredBookings = filterStatus === 'all' 
-    ? bookings 
-    : bookings.filter(b => b.status === filterStatus)
+  async function handleCancel(booking: Booking) {
+    setIsProcessing(true)
+    try {
+      setBookings(prev => prev.filter(b => b.id !== booking.id))
+      setOpenCancel(false)
+      toast.success('Cancelling booking...')
 
-  const getStatusBadge = (status: string) => {
-    const colors: Record<string, string> = {
-      pending: 'bg-yellow-100 text-yellow-800',
-      approved: 'bg-blue-100 text-blue-800',
-      rejected: 'bg-red-100 text-red-800',
-      checked_in: 'bg-green-100 text-green-800',
-      completed: 'bg-purple-100 text-purple-800',
-      cancelled: 'bg-gray-100 text-gray-800'
+      await api.del(`/bookings/${booking.id}`)
+      toast.success('Booking cancelled!')
+    } catch (err: any) {
+      await fetchBookings()
+      toast.error(err.message || 'Failed to cancel booking')
+    } finally {
+      setIsProcessing(false)
     }
-    return colors[status] || 'bg-gray-100 text-gray-800'
   }
 
-  const statusFilters: FilterStatus[] = ['all', 'pending', 'approved', 'checked_in', 'completed', 'rejected', 'cancelled']
+  function handleRowClick(booking: Booking) {
+    setSelectedBooking(booking)
+    setOpenView(true)
+  }
+
+  const canCheckIn = (booking: Booking) => {
+    if (booking.status !== 'approved') return false
+    const now = dayjs()
+    const start = dayjs(booking.start_time)
+    const minutesUntilStart = start.diff(now, 'minute')
+    return minutesUntilStart <= 15 && minutesUntilStart >= -15
+  }
+
+  const canCancel = (booking: Booking) => {
+    return ['pending', 'approved'].includes(booking.status) && 
+           dayjs(booking.start_time).isAfter(dayjs())
+  }
 
   return (
-    <div className="max-w-6xl">
-      {/* Header */}
+    <div className="max-w-7xl">
+      <Breadcrumbs 
+        items={[
+          { label: 'Employee Dashboard', href: '/dashboard/employee' },
+          { label: 'My Bookings' }
+        ]} 
+      />
+
       <div className="mb-8">
-        <h1 className="text-4xl font-bold text-gray-900 mb-2" style={{ fontFamily: "'Playfair Display', serif" }}>
-          Booking History
+        <h1 className="text-4xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent mb-2" style={{ fontFamily: "'Playfair Display', serif" }}>
+          My Bookings
         </h1>
-        <p className="text-gray-600">View all your past and current bookings</p>
+        <p className="text-gray-600">
+          View and manage your resource bookings
+        </p>
       </div>
 
-      {/* Filters */}
-      <div className="mb-6 flex gap-2 flex-wrap">
-        {statusFilters.map((status) => (
-          <button
-            key={status}
-            onClick={() => setFilterStatus(status)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-              filterStatus === status
-                ? 'bg-gray-900 text-white shadow-md'
-                : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-100'
-            }`}
-          >
-            {status.replace('_', ' ').toUpperCase()}
-            <Badge 
-              variant="secondary" 
-              className={`ml-2 ${filterStatus === status ? 'bg-gray-700 text-white' : 'bg-gray-100 text-gray-900'}`}
-            >
-              {status === 'all' ? bookings.length : bookings.filter(b => b.status === status).length}
-            </Badge>
-          </button>
-        ))}
+      {/* Filter Tabs */}
+      <div className="flex gap-2 mb-6">
+        <Button
+          variant={filter === 'all' ? 'default' : 'outline'}
+          onClick={() => setFilter('all')}
+          className={filter === 'all' ? 'bg-gradient-to-r from-indigo-600 to-purple-600' : 'hover:bg-indigo-50'}
+        >
+          All ({bookings.length})
+        </Button>
+        <Button
+          variant={filter === 'active' ? 'default' : 'outline'}
+          onClick={() => setFilter('active')}
+          className={filter === 'active' ? 'bg-gradient-to-r from-emerald-500 to-teal-500' : 'hover:bg-emerald-50'}
+        >
+          Active ({bookings.filter(b => ['pending', 'approved', 'checked_in'].includes(b.status) && dayjs(b.start_time).isAfter(dayjs())).length})
+        </Button>
+        <Button
+          variant={filter === 'past' ? 'default' : 'outline'}
+          onClick={() => setFilter('past')}
+          className={filter === 'past' ? 'bg-gradient-to-r from-purple-500 to-pink-500' : 'hover:bg-purple-50'}
+        >
+          Past ({bookings.filter(b => ['completed', 'rejected', 'cancelled'].includes(b.status) || dayjs(b.end_time).isBefore(dayjs())).length})
+        </Button>
       </div>
 
       {/* Bookings Table */}
-      <Card className="border-gray-200 shadow-lg">
-        <CardHeader className="border-b border-gray-100 bg-gray-50">
-          <CardTitle className="text-2xl text-gray-900">
-            {filterStatus === 'all' ? 'All Bookings' : `${filterStatus.replace('_', ' ')} Bookings`.toUpperCase()}
+      <Card className="shadow-lg">
+        <CardHeader className="bg-gradient-to-r from-indigo-50 to-purple-50">
+          <CardTitle>
+            {filteredBookings.length} Bookings
           </CardTitle>
-          <CardDescription>
-            {filteredBookings.length} {filteredBookings.length === 1 ? 'booking' : 'bookings'}
-          </CardDescription>
         </CardHeader>
         <CardContent className="p-0">
           {loading ? (
-            <div className="text-center py-12 text-gray-500">Loading bookings...</div>
+            <div className="p-6">
+              <TableSkeleton rows={5} columns={5} />
+            </div>
           ) : filteredBookings.length === 0 ? (
-            <div className="text-center py-12">
-              <Calendar className="w-12 h-12 mx-auto text-gray-300 mb-3" />
-              <p className="text-gray-500">No bookings found</p>
+            <div className="text-center py-16">
+              <Calendar className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                No bookings yet
+              </h3>
+              <p className="text-gray-600 mb-4">
+                Start by booking a resource
+              </p>
+              <Button
+                onClick={() => window.location.href = '/book'}
+                className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700"
+              >
+                Book Resource
+              </Button>
             </div>
           ) : (
             <Table>
               <TableHeader>
-                <TableRow className="bg-gray-50 hover:bg-gray-50">
-                  <TableHead className="font-semibold text-gray-900">Resource</TableHead>
-                  <TableHead className="font-semibold text-gray-900">Date & Time</TableHead>
-                  <TableHead className="font-semibold text-gray-900">Location</TableHead>
-                  <TableHead className="font-semibold text-gray-900">Status</TableHead>
-                  <TableHead className="font-semibold text-gray-900">Checked In</TableHead>
-                  <TableHead className="font-semibold text-gray-900 text-center">Actions</TableHead>
+                <TableRow className="bg-gray-50">
+                  <TableHead>Resource</TableHead>
+                  <TableHead>Date & Time</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredBookings.map((booking) => (
                   <TableRow 
-                    key={booking.id} 
-                    className="hover:bg-gray-50 cursor-pointer"
-                    onClick={() => onViewDetails(booking)}
+                    key={booking.id}
+                    className="cursor-pointer hover:bg-indigo-50/50 transition-colors"
+                    onClick={() => handleRowClick(booking)}
                   >
                     <TableCell>
-                      <div>
-                        <div className="font-medium text-gray-900">{booking.resource?.name || 'Unknown'}</div>
-                        <div className="text-sm text-gray-500 capitalize">
-                          {booking.resource?.resource_type?.replace('_', ' ') || '-'}
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-lg flex items-center justify-center">
+                          <MapPin className="w-5 h-5 text-indigo-600" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-gray-900">{booking.resource?.name}</p>
+                          <p className="text-sm text-gray-500">{booking.resource?.location}</p>
                         </div>
                       </div>
                     </TableCell>
                     <TableCell>
                       <div className="space-y-1">
-                        <div className="flex items-center gap-1 text-sm text-gray-600">
-                          <Calendar className="w-3 h-3" />
-                          {new Date(booking.start_time).toLocaleDateString()}
+                        <div className="flex items-center gap-1 text-sm">
+                          <Calendar className="w-3 h-3 text-gray-400" />
+                          <span className="font-medium">{dayjs(booking.start_time).format('MMM D, YYYY')}</span>
                         </div>
                         <div className="flex items-center gap-1 text-sm text-gray-600">
-                          <Clock className="w-3 h-3" />
-                          {new Date(booking.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {new Date(booking.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          <Clock className="w-3 h-3 text-gray-400" />
+                          {dayjs(booking.start_time).format('h:mm A')} - {dayjs(booking.end_time).format('h:mm A')}
                         </div>
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-2 text-gray-600">
-                        <MapPin className="w-4 h-4" />
-                        {booking.resource?.location || '-'}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="secondary" className={getStatusBadge(booking.status)}>
-                        {booking.status.replace('_', ' ').toUpperCase()}
+                      <Badge className={`${statusConfig[booking.status].color} border`}>
+                        {booking.status}
                       </Badge>
                     </TableCell>
-                    <TableCell>
-                      {booking.checked_in_at ? (
-                        <div className="flex items-center gap-1 text-green-600">
-                          <CheckCircle className="w-4 h-4" />
-                          <span className="text-sm">Yes</span>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-1 text-gray-400">
-                          <XCircle className="w-4 h-4" />
-                          <span className="text-sm">No</span>
-                        </div>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex justify-center">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            onViewDetails(booking)
-                          }}
-                          className="border-gray-300"
-                        >
-                          <Eye className="w-4 h-4 mr-1" />
-                          View
-                        </Button>
+                    <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center justify-end gap-2">
+                        {canCheckIn(booking) && (
+                          <Button
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setSelectedBooking(booking)
+                              setOpenCheckIn(true)
+                            }}
+                            className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600"
+                          >
+                            <LogIn className="w-4 h-4 mr-1" />
+                            Check In
+                          </Button>
+                        )}
+                        {canCancel(booking) && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setSelectedBooking(booking)
+                              setOpenCancel(true)
+                            }}
+                            className="border-rose-300 text-rose-600 hover:bg-rose-50"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -231,86 +324,143 @@ const BookingHistory: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* View Details Dialog */}
+      {/* View Dialog */}
       <Dialog open={openView} onOpenChange={setOpenView}>
-        <DialogContent className="bg-white max-w-2xl">
+        <DialogContent className="bg-white/95 backdrop-blur-sm">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-semibold">Booking Details</DialogTitle>
-            <DialogDescription>Complete information about your booking</DialogDescription>
+            <DialogTitle className="text-2xl bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+              Booking Details
+            </DialogTitle>
           </DialogHeader>
-
           {selectedBooking && (
             <div className="space-y-4 mt-4">
-              <div className="bg-gray-50 p-4 rounded-lg space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <div className="text-xs font-semibold text-gray-500 uppercase mb-1">Resource</div>
-                    <div className="font-medium text-gray-900">{selectedBooking.resource?.name}</div>
-                    <div className="text-sm text-gray-600 capitalize">
-                      {selectedBooking.resource?.resource_type?.replace('_', ' ')}
-                    </div>
-                  </div>
+              <div className="bg-indigo-50 rounded-lg p-4">
+                <p className="text-sm text-gray-600 mb-1">Resource</p>
+                <p className="font-semibold text-gray-900 text-lg">{selectedBooking.resource?.name}</p>
+                <p className="text-sm text-gray-600 flex items-center gap-1 mt-1">
+                  <MapPin className="w-3 h-3" />
+                  {selectedBooking.resource?.location}
+                </p>
+              </div>
 
-                  <div>
-                    <div className="text-xs font-semibold text-gray-500 uppercase mb-1">Status</div>
-                    <Badge variant="secondary" className={getStatusBadge(selectedBooking.status)}>
-                      {selectedBooking.status.replace('_', ' ').toUpperCase()}
-                    </Badge>
-                  </div>
-
-                  <div>
-                    <div className="text-xs font-semibold text-gray-500 uppercase mb-1">Start Time</div>
-                    <div className="text-sm text-gray-900">{new Date(selectedBooking.start_time).toLocaleString()}</div>
-                  </div>
-
-                  <div>
-                    <div className="text-xs font-semibold text-gray-500 uppercase mb-1">End Time</div>
-                    <div className="text-sm text-gray-900">{new Date(selectedBooking.end_time).toLocaleString()}</div>
-                  </div>
-
-                  {selectedBooking.resource?.location && (
-                    <div>
-                      <div className="text-xs font-semibold text-gray-500 uppercase mb-1">Location</div>
-                      <div className="text-sm text-gray-900">{selectedBooking.resource.location}</div>
-                    </div>
-                  )}
-
-                  <div>
-                    <div className="text-xs font-semibold text-gray-500 uppercase mb-1">Checked In</div>
-                    {selectedBooking.checked_in_at ? (
-                      <div className="flex items-center gap-2 text-green-600">
-                        <CheckCircle className="w-4 h-4" />
-                        <span className="text-sm">{new Date(selectedBooking.checked_in_at).toLocaleString()}</span>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2 text-gray-500">
-                        <XCircle className="w-4 h-4" />
-                        <span className="text-sm">Not checked in</span>
-                      </div>
-                    )}
-                  </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-gray-600 mb-1">Date</p>
+                  <p className="font-medium text-gray-900">{dayjs(selectedBooking.start_time).format('MMMM D, YYYY')}</p>
                 </div>
+                <div>
+                  <p className="text-sm text-gray-600 mb-1">Time</p>
+                  <p className="font-medium text-gray-900">
+                    {dayjs(selectedBooking.start_time).format('h:mm A')} - {dayjs(selectedBooking.end_time).format('h:mm A')}
+                  </p>
+                </div>
+              </div>
 
-                {selectedBooking.admin_note && (
-                  <div className="pt-4 border-t border-gray-200">
-                    <div className="text-xs font-semibold text-gray-500 uppercase mb-2">Admin Note</div>
-                    <div className="bg-white p-3 rounded border border-gray-200 text-sm text-gray-900">
-                      {selectedBooking.admin_note}
-                    </div>
-                  </div>
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Status</p>
+                <Badge className={`${statusConfig[selectedBooking.status].color} border`}>
+                  {selectedBooking.status}
+                </Badge>
+              </div>
+
+              {selectedBooking.admin_note && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                  <p className="text-sm font-medium text-amber-900 mb-1">Admin Note</p>
+                  <p className="text-sm text-amber-800">{selectedBooking.admin_note}</p>
+                </div>
+              )}
+
+              <div className="flex gap-3 pt-4">
+                {canCheckIn(selectedBooking) && (
+                  <Button
+                    onClick={() => {
+                      setOpenView(false)
+                      setOpenCheckIn(true)
+                    }}
+                    className="flex-1 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600"
+                  >
+                    <LogIn className="w-4 h-4 mr-2" />
+                    Check In
+                  </Button>
                 )}
-
-                <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-200">
-                  <div>
-                    <div className="text-xs font-semibold text-gray-500 uppercase mb-1">Booked On</div>
-                    <div className="text-sm text-gray-900">{new Date(selectedBooking.created_at).toLocaleString()}</div>
-                  </div>
-                </div>
+                {canCancel(selectedBooking) && (
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setOpenView(false)
+                      setOpenCancel(true)
+                    }}
+                    className="flex-1 border-rose-300 text-rose-600 hover:bg-rose-50"
+                  >
+                    Cancel Booking
+                  </Button>
+                )}
+                <Button variant="outline" onClick={() => setOpenView(false)} className="flex-1">
+                  Close
+                </Button>
               </div>
             </div>
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Check-In Confirmation */}
+      <AlertDialog open={openCheckIn} onOpenChange={setOpenCheckIn}>
+        <AlertDialogContent className="bg-white/95 backdrop-blur-sm">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-emerald-600">Check In</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to check in to this booking?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isProcessing}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => selectedBooking && handleCheckIn(selectedBooking)}
+              disabled={isProcessing}
+              className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600"
+            >
+              {isProcessing ? (
+                <>
+                  <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                  Checking In...
+                </>
+              ) : (
+                'Check In'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Cancel Confirmation */}
+      <AlertDialog open={openCancel} onOpenChange={setOpenCancel}>
+        <AlertDialogContent className="bg-white/95 backdrop-blur-sm">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-rose-600">Cancel Booking</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to cancel this booking? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isProcessing}>No, Keep It</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => selectedBooking && handleCancel(selectedBooking)}
+              disabled={isProcessing}
+              className="bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600"
+            >
+              {isProcessing ? (
+                <>
+                  <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                  Cancelling...
+                </>
+              ) : (
+                'Yes, Cancel'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

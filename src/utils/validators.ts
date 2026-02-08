@@ -32,13 +32,10 @@ export type BookingFormValues = z.infer<typeof bookingSchema>
 
 // Booking Approval Schema
 export const bookingApprovalSchema = z.object({
-  status: z.enum(['approved', 'rejected'], { message: 'Status must be approved or rejected' }),
-  admin_note: z.string().optional()
+  admin_note: z.string().max(500, 'Note too long').optional()
 })
 
 export type BookingApprovalFormValues = z.infer<typeof bookingApprovalSchema>
-
-
 // Resource Type Schema
 export const resourceTypeSchema = z.enum(['meeting_room', 'phone', 'laptop', 'turf'])
 export type ResourceType = z.infer<typeof resourceTypeSchema>
@@ -83,3 +80,4 @@ export const turfPropertiesSchema = z.object({
   has_lighting: z.boolean().optional(),
   surface_type: z.string().optional()
 })
+

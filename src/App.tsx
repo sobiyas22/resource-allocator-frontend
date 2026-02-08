@@ -15,7 +15,7 @@ import DashboardRedirect from './pages/DashboardRedirect' // keeps /dashboard re
 import Unauthorized from './pages/Unauthorized'
 import Profile from './pages/Profile'
 import { Role } from './types/auth'
-
+import AdminDashboard from './pages/admin/AdminDashboard'
 const App: React.FC = () => {
   return (
     <Routes>
@@ -41,7 +41,8 @@ const App: React.FC = () => {
           </ProtectedRoute>
         }
       >
-        <Route index element={<Navigate to="bookings" replace />} />
+        <Route index element={<Navigate to="/dashboard/admin/overview" replace />} />
+        <Route path="overview" element={<AdminDashboard />} />
         <Route path="users" element={<AdminUsers />} />
         <Route path="resources" element={<AdminResources />} />
         <Route path="book" element={<BookResource />} />
