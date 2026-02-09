@@ -515,7 +515,7 @@ const BookResource: React.FC = () => {
               <CardContent className="p-5 space-y-5">
                 <div className="space-y-3">
                   <label className="text-sm font-medium text-neutral-700">Date</label>
-                  {/* Enhanced Calendar Container */}
+                  {/* Calendar Container */}
                   <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-hidden">
                     <Calendar
                       mode="single"

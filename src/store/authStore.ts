@@ -16,27 +16,70 @@ type AuthState = {
   setRememberMe: (remember: boolean) => void
 }
 
+// Helper to safely read and validate initial state
+const getInitialState = () => {
+  const defaultState = {
+    token: null,
+    user: null,
+    expires_at: null,
+    rememberMe: false,
+  }
+
+  try {
+    const localStored = localStorage.getItem(config.tokenKey)
+    const sessionStored = sessionStorage.getItem(config.tokenKey)
+    const stored = localStored || sessionStored
+
+    if (stored) {
+      const data = JSON.parse(stored)
+      
+      // Check expiry immediately
+      if (data.expires_at) {
+        const expiryTime = new Date(data.expires_at).getTime()
+        const now = Date.now()
+        if (now >= expiryTime) {
+          // Token expired, clear storage and return default
+          localStorage.removeItem(config.tokenKey)
+          sessionStorage.removeItem(config.tokenKey)
+          return defaultState
+        }
+      }
+
+      return {
+        token: data.token,
+        user: data.user,
+        expires_at: data.expires_at,
+        rememberMe: data.rememberMe || false,
+      }
+    }
+  } catch (error) {
+    console.error('Failed to load auth from storage:', error)
+  }
+
+  return defaultState
+}
+
 export const useAuth = create<AuthState>((set, get) => ({
-  token: null,
-  user: null,
-  expires_at: null,
-  rememberMe: false,
+  // Initialize with values from storage
+  ...getInitialState(),
 
   login: (data, rememberMe = false) => {
-    set({
-      token: data.token,
-      user: data.user,
-      expires_at: data.expires_at,
-      rememberMe
-    })
-    
     const authData = {
       token: data.token,
       user: data.user,
       expires_at: data.expires_at,
       rememberMe
     }
+    
+    // Update state first
+    set({
+      token: data.token,
+      user: data.user,
+      expires_at: data.expires_at,
+      rememberMe
+    })
 
+    // Then persist
     if (rememberMe) {
       localStorage.setItem(config.tokenKey, JSON.stringify(authData))
     } else {
@@ -51,37 +94,10 @@ export const useAuth = create<AuthState>((set, get) => ({
   },
 
   loadFromStorage: () => {
-    try {
-      const localStored = localStorage.getItem(config.tokenKey)
-      const sessionStored = sessionStorage.getItem(config.tokenKey)
-      const stored = localStored || sessionStored
-
-      if (stored) {
-        const data = JSON.parse(stored)
-        
-        // Check if token is expired
-        if (data.expires_at) {
-          const expiryTime = new Date(data.expires_at).getTime()
-          const now = Date.now()
-
-          if (now >= expiryTime) {
-            // Token expired, clear storage
-            get().logout()
-            return
-          }
-        }
-
-        set({
-          token: data.token,
-          user: data.user,
-          expires_at: data.expires_at,
-          rememberMe: data.rememberMe || false
-        })
-      }
-    } catch (error) {
-      console.error('Failed to load auth from storage:', error)
-      get().logout()
-    }
+    // Re-use the getInitialState logic or simpler version since state is already init
+    // This is optional now, but good to keep if you need to re-sync
+    const state = getInitialState()
+    set(state)
   },
 
   setUser: (user) => {
@@ -105,20 +121,14 @@ export const useAuth = create<AuthState>((set, get) => ({
   isTokenExpired: () => {
     const { expires_at } = get()
     if (!expires_at) return true
-
     const expiryTime = new Date(expires_at).getTime()
-    const now = Date.now()
-    return now >= expiryTime
+    return Date.now() >= expiryTime
   },
 
   isTokenExpiringSoon: () => {
     const { expires_at } = get()
     if (!expires_at) return true
-
     const expiryTime = new Date(expires_at).getTime()
-    const now = Date.now()
-    const buffer = config.tokenExpiryBuffer
-
-    return now >= (expiryTime - buffer)
+    return Date.now() >= (expiryTime - config.tokenExpiryBuffer)
   },
 }))

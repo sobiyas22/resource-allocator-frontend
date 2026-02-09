@@ -71,14 +71,18 @@ const EmployeeDashboard: React.FC = () => {
             const allBookings = res.bookings || []
 
             const now = dayjs.utc()
-            const active = allBookings.filter(b =>
-                (b.status === 'approved' || b.status === 'checked_in') &&
-                dayjs.utc(b.end_time).isAfter(now)
-            ).sort((a, b) => dayjs.utc(a.start_time).valueOf() - dayjs.utc(b.start_time).valueOf())
+            const active = allBookings
+                .filter(b =>
+                    (b.status === 'approved' || b.status === 'checked_in') &&
+                    dayjs.utc(b.end_time).isAfter(now)
+                )
+                .sort((a, b) => dayjs.utc(b.created_at).valueOf() - dayjs.utc(a.created_at).valueOf())
+                .slice(0, 3)
+
 
             const recent = allBookings
                 .sort((a, b) => dayjs.utc(b.created_at).valueOf() - dayjs.utc(a.created_at).valueOf())
-                .slice(0, 5)
+                .slice(0, 3)
 
             setActiveBookings(active)
             setRecentBookings(recent)
