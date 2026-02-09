@@ -245,6 +245,33 @@ const BookResource: React.FC = () => {
     }
   }
 
+  async function checkBlockedSlot(slot: TimeSlot) {
+    if (!selectedResource) return
+
+    toast.info('Checking for alternatives...')
+    try {
+      await api.post('/bookings', {
+        resource_id: selectedResource.id,
+        start_time: slot.start_time,
+        end_time: slot.end_time
+      })
+      // If successful (which shouldn't happen for a blocked slot in theory, but if it does), select it
+      toast.success('Slot appears available! Selected.')
+      setSelectedSlot(slot)
+    } catch (err: any) {
+      if (err.response?.data?.suggestions) {
+        const { available_resources, available_slots } = err.response.data.suggestions
+        setAlternatives({
+          resources: available_resources || [],
+          slots: available_slots || []
+        })
+        setShowAlternatives(true)
+      } else {
+        toast.error('This slot is fully blocked with no immediate alternatives.')
+      }
+    }
+  }
+
   const isDateDisabled = (date: Date) => {
     const day = date.getDay()
     if (day === 0 || day === 6) return true
@@ -257,18 +284,20 @@ const BookResource: React.FC = () => {
   const now = dayjs.utc()
   const isToday = dayjs(selectedDate).isSame(now, 'day')
 
-  const categorizedSlots = slots.reduce((acc, slot) => {
-    const slotStart = dayjs.utc(slot.start_time)
-    const isPast = isToday && slotStart.isBefore(now)
-    if (isPast) acc.past.push(slot)
-    else if (slot.available) acc.available.push(slot)
-    else acc.booked.push(slot)
-    return acc
-  }, { available: [] as TimeSlot[], booked: [] as TimeSlot[], past: [] as TimeSlot[] })
+  const sortedSlots = slots.sort((a, b) =>
+    dayjs(a.start_time).valueOf() - dayjs(b.start_time).valueOf()
+  )
 
-  const availableCount = categorizedSlots.available.length
-  const bookedCount = categorizedSlots.booked.length
-  const pastCount = categorizedSlots.past.length
+  const getSlotStatus = (slot: TimeSlot): 'past' | 'blocked' | 'available' => {
+    const slotStart = dayjs.utc(slot.start_time)
+    if (dayjs(selectedDate).isSame(now, 'day') && slotStart.isBefore(now)) {
+      return 'past'
+    }
+    return slot.available ? 'available' : 'blocked'
+  }
+
+  const availableCount = slots.filter(s => getSlotStatus(s) === 'available').length
+  const blockedCount = slots.filter(s => getSlotStatus(s) === 'blocked').length
 
   // Format time in UTC - readable format
   const formatTime = (timeString: string) => {
@@ -276,84 +305,75 @@ const BookResource: React.FC = () => {
   }
 
   // Compact Slot card component
-  const SlotCard = ({ 
-    slot, 
-    type, 
-    isSelected = false, 
-    onClick 
-  }: { 
+  const SlotCard = ({
+    slot,
+    isSelected = false,
+    onClick
+  }: {
     slot: TimeSlot
-    type: 'available' | 'booked' | 'past' | 'selected'
     isSelected?: boolean
-    onClick?: () => void 
+    onClick?: (slot: TimeSlot) => void
   }) => {
-    const baseStyles = "relative p-3 rounded-xl border transition-all duration-200 group"
-    
-    const typeStyles = {
-      available: `bg-neutral-50 border-neutral-200 hover:border-neutral-400 hover:shadow-md hover:bg-neutral-100 cursor-pointer`,
-      selected: `bg-gradient-to-br from-emerald-500 to-emerald-600 border-emerald-500 shadow-lg shadow-emerald-200 cursor-pointer`,
-      booked: `bg-gradient-to-br from-red-50 to-red-100 border-red-300 opacity-80 cursor-not-allowed`,
-      past: `bg-neutral-100 border-neutral-200 opacity-50 cursor-not-allowed`
-    }
+    const status = getSlotStatus(slot)
+    const baseStyles = "relative p-3 rounded-xl border transition-all duration-200 group flex flex-col items-center gap-1.5"
 
-    const actualType = isSelected ? 'selected' : type
+    // Style logic
+    let typeStyles = ""
+    if (isSelected) {
+      typeStyles = "bg-gradient-to-br from-emerald-500 to-emerald-600 border-emerald-500 shadow-lg shadow-emerald-200 cursor-pointer"
+    } else if (status === 'past') {
+      typeStyles = "bg-neutral-100 border-neutral-200 opacity-50 cursor-not-allowed"
+    } else if (status === 'blocked') {
+      typeStyles = "bg-red-50 border-red-200 hover:border-red-300 hover:shadow-sm cursor-pointer"
+    } else {
+      // Available
+      typeStyles = "bg-white border-neutral-200 hover:border-emerald-400 hover:shadow-md hover:bg-emerald-50/30 cursor-pointer"
+    }
 
     return (
       <div
-        onClick={type === 'available' ? onClick : undefined}
-        className={`${baseStyles} ${typeStyles[actualType]}`}
+        onClick={() => status !== 'past' && onClick?.(slot)}
+        className={`${baseStyles} ${typeStyles}`}
       >
-        <div className="flex flex-col items-center gap-1.5">
-          {/* Time display */}
-          <div className="text-center">
-            <div className={`font-semibold text-xs ${
-              actualType === 'selected' ? 'text-white' : 
-              actualType === 'booked' ? 'text-red-700' : 'text-neutral-800'
+        {/* Time display */}
+        <div className="text-center w-full">
+          <div className={`font-semibold text-xs ${isSelected ? 'text-white' :
+            status === 'blocked' ? 'text-red-700' : 'text-neutral-800'
             }`}>
-              {formatTime(slot.start_time)}
-            </div>
-            <div className={`flex items-center justify-center gap-1 my-0.5 ${
-              actualType === 'selected' ? 'text-white/70' : 
-              actualType === 'booked' ? 'text-red-400' : 'text-neutral-400'
-            }`}>
-              <ArrowRight className="w-3 h-3" />
-            </div>
-            <div className={`font-medium text-xs ${
-              actualType === 'selected' ? 'text-white/90' : 
-              actualType === 'booked' ? 'text-red-600' : 'text-neutral-600'
-            }`}>
-              {formatTime(slot.end_time)}
-            </div>
+            {formatTime(slot.start_time)}
           </div>
-
-          {/* Duration badge */}
-          <div className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
-            actualType === 'selected' ? 'bg-white/20 text-white' :
-            actualType === 'booked' ? 'bg-red-200 text-red-700' :
-            actualType === 'available' ? 'bg-neutral-200 text-neutral-600' : 
-            'bg-neutral-200 text-neutral-500'
-          }`}>
-            {duration === 0.5 ? '30m' : '1hr'}
+          <div className={`flex items-center justify-center gap-1 my-0.5 ${isSelected ? 'text-white/70' :
+            status === 'blocked' ? 'text-red-400' : 'text-neutral-400'
+            }`}>
+            <ArrowRight className="w-3 h-3" />
           </div>
-
-          {/* Status indicator */}
-          {actualType === 'booked' && (
-            <Badge variant="secondary" className="text-[10px] bg-red-100 text-red-700 border-0 px-1.5 py-0">
-              Blocked
-            </Badge>
-          )}
-          {actualType === 'past' && (
-            <Badge variant="secondary" className="text-[10px] bg-neutral-200 text-neutral-500 border-0 px-1.5 py-0">
-              Past
-            </Badge>
-          )}
-          {isSelected && (
-            <div className="flex items-center gap-0.5 text-white text-[10px] font-medium">
-              <CheckCircle className="w-3 h-3" />
-              Selected
-            </div>
-          )}
+          <div className={`font-medium text-xs ${isSelected ? 'text-white/90' :
+            status === 'blocked' ? 'text-red-600' : 'text-neutral-600'
+            }`}>
+            {formatTime(slot.end_time)}
+          </div>
         </div>
+
+        {/* Status indicator */}
+        {status === 'blocked' && (
+          <Badge variant="secondary" className="text-[10px] bg-red-100 text-red-700 border-0 px-1.5 py-0 w-full justify-center">
+            Blocked
+          </Badge>
+        )}
+        {status === 'past' && (
+          <Badge variant="secondary" className="text-[10px] bg-neutral-200 text-neutral-500 border-0 px-1.5 py-0 w-full justify-center">
+            Past
+          </Badge>
+        )}
+        {status === 'available' && !isSelected && (
+          <div className="h-5"></div> // Spacer to keep height consistent
+        )}
+        {isSelected && (
+          <div className="flex items-center justify-center gap-0.5 text-white text-[10px] font-medium w-full">
+            <CheckCircle className="w-3 h-3" />
+            Selected
+          </div>
+        )}
       </div>
     )
   }
@@ -520,7 +540,7 @@ const BookResource: React.FC = () => {
                     <Calendar
                       mode="single"
                       selected={selectedDate}
-                      onSelect={(date) => date && setSelectedDate(date)}
+                      onSelect={(date: any) => date && setSelectedDate(date)}
                       disabled={isDateDisabled}
                       className="w-full! p-0"
                       classNames={{
@@ -548,14 +568,14 @@ const BookResource: React.FC = () => {
                     />
                   </div>
                 </div>
-                
+
                 <div className="space-y-3">
                   <label className="text-sm font-medium text-neutral-700">Duration</label>
                   <Select value={String(duration)} onValueChange={(value) => setDuration(Number(value) as 0.5 | 1)}>
                     <SelectTrigger className="border-neutral-200 h-12 text-base bg-white">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent 
+                    <SelectContent
                       className="bg-white border border-neutral-200 shadow-lg"
                       position="popper"
                       side="bottom"
@@ -576,7 +596,7 @@ const BookResource: React.FC = () => {
                     </SelectContent>
                   </Select>
                 </div>
-                
+
                 <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
                   <div className="flex items-start gap-3">
                     <Info className="w-5 h-5 text-blue-600 mt-0.5 shrink-0" />
@@ -665,7 +685,7 @@ const BookResource: React.FC = () => {
                       {availableCount} Available
                     </Badge>
                     <Badge className="bg-red-100 text-red-700 border border-red-200 px-3 py-1">
-                      {bookedCount} Blocked
+                      {blockedCount} Blocked
                     </Badge>
                   </div>
                 </div>
@@ -687,75 +707,24 @@ const BookResource: React.FC = () => {
                   </div>
                 ) : (
                   <>
-                    {/* Stats Overview - Compact */}
-                    <div className="grid grid-cols-3 gap-3 mb-6">
-                      <div className="bg-neutral-50 border border-neutral-200 rounded-xl p-3 text-center">
-                        <p className="text-2xl font-bold text-neutral-700">{availableCount}</p>
-                        <p className="text-xs text-neutral-500 mt-0.5">Available</p>
-                      </div>
-                      <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-center">
-                        <p className="text-2xl font-bold text-red-600">{bookedCount}</p>
-                        <p className="text-xs text-red-500 mt-0.5">Blocked</p>
-                      </div>
-                      {isToday && (
-                        <div className="bg-neutral-100 border border-neutral-200 rounded-xl p-3 text-center">
-                          <p className="text-2xl font-bold text-neutral-500">{pastCount}</p>
-                          <p className="text-xs text-neutral-400 mt-0.5">Past</p>
-                        </div>
-                      )}
+                    {/* All Slots Grid */}
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 mb-6">
+                      {sortedSlots.map((slot, index) => (
+                        <SlotCard
+                          key={index}
+                          slot={slot}
+                          isSelected={selectedSlot?.start_time === slot.start_time}
+                          onClick={(s) => {
+                            const status = getSlotStatus(s)
+                            if (status === 'blocked') {
+                              checkBlockedSlot(s)
+                            } else if (status === 'available') {
+                              setSelectedSlot(s)
+                            }
+                          }}
+                        />
+                      ))}
                     </div>
-
-                    {/* Available Slots */}
-                    {availableCount > 0 && (
-                      <div className="mb-6">
-                        <h4 className="text-sm font-semibold text-neutral-700 mb-3 flex items-center gap-2">
-                          <CheckCircle className="w-4 h-4 text-neutral-500" /> 
-                          Available Slots
-                          <span className="ml-auto text-xs font-normal text-neutral-400">Click to select</span>
-                        </h4>
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                          {categorizedSlots.available.map((slot, index) => (
-                            <SlotCard
-                              key={index}
-                              slot={slot}
-                              type="available"
-                              isSelected={selectedSlot?.start_time === slot.start_time}
-                              onClick={() => setSelectedSlot(slot)}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Booked/Blocked Slots */}
-                    {bookedCount > 0 && (
-                      <div className="mb-6">
-                        <h4 className="text-sm font-semibold text-red-700 mb-3 flex items-center gap-2">
-                          <XCircle className="w-4 h-4" /> 
-                          Blocked Slots
-                        </h4>
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                          {categorizedSlots.booked.map((slot, index) => (
-                            <SlotCard key={index} slot={slot} type="booked" />
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Past Slots */}
-                    {isToday && pastCount > 0 && (
-                      <div className="mb-6">
-                        <h4 className="text-sm font-semibold text-neutral-500 mb-3 flex items-center gap-2">
-                          <Clock className="w-4 h-4" /> 
-                          Past Slots
-                        </h4>
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                          {categorizedSlots.past.map((slot, index) => (
-                            <SlotCard key={index} slot={slot} type="past" />
-                          ))}
-                        </div>
-                      </div>
-                    )}
 
                     {/* Booking Summary */}
                     {selectedSlot && (
