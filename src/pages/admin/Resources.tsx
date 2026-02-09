@@ -43,13 +43,13 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Switch } from '@/components/ui/switch'
-import { 
-  Plus, 
-  Edit, 
-  Trash2, 
-  DoorOpen, 
-  Smartphone, 
-  Laptop as LaptopIcon, 
+import {
+  Plus,
+  Edit,
+  Trash2,
+  DoorOpen,
+  Smartphone,
+  Laptop as LaptopIcon,
   Sprout,
   MapPin,
   Eye,
@@ -117,11 +117,11 @@ const Resources: React.FC = () => {
     setValue,
   } = useForm<ResourceFormValues>({
     resolver: zodResolver(resourceSchema),
-    defaultValues: { 
-      resource_type: 'meeting_room', 
-      name: '', 
-      is_active: true, 
-      properties: {} 
+    defaultValues: {
+      resource_type: 'meeting_room',
+      name: '',
+      is_active: true,
+      properties: {}
     }
   })
 
@@ -134,11 +134,11 @@ const Resources: React.FC = () => {
     setValue: setEditValue
   } = useForm<ResourceFormValues>({
     resolver: zodResolver(resourceSchema),
-    defaultValues: { 
-      resource_type: 'meeting_room', 
-      name: '', 
-      is_active: true, 
-      properties: {} 
+    defaultValues: {
+      resource_type: 'meeting_room',
+      name: '',
+      is_active: true,
+      properties: {}
     }
   })
 
@@ -338,7 +338,7 @@ const Resources: React.FC = () => {
   async function toggleActive(resource: Resource) {
     try {
       const newStatus = !resource.is_active
-      
+
       // Optimistic update
       const updateList = (prev: Resource[]) =>
         prev.map(r => r.id === resource.id ? { ...r, is_active: newStatus } : r)
@@ -359,7 +359,7 @@ const Resources: React.FC = () => {
         is_active: newStatus,
         resource_type: toApiResourceType(resource.resource_type)
       })
-      
+
       toast.success(`Resource ${newStatus ? 'activated' : 'deactivated'} successfully!`)
     } catch (err: any) {
       await fetchResources()
@@ -422,11 +422,11 @@ const Resources: React.FC = () => {
 
   return (
     <div className="max-w-7xl">
-      <Breadcrumbs 
+      <Breadcrumbs
         items={[
           { label: 'Admin Dashboard', href: '/dashboard/admin' },
           { label: 'Resource Management' }
-        ]} 
+        ]}
       />
 
       <div className="mb-8">
@@ -450,14 +450,14 @@ const Resources: React.FC = () => {
           />
         </div>
 
-        <Button onClick={() => setOpenCreate(true)} className="bg-gray-800 hover:bg-gray-900">
+        <Button onClick={() => setOpenCreate(true)} className="bg-gray-700 hover:bg-gray-800 text-white">
           <Plus className="w-4 h-4 mr-2" />
           Add Resource
           <kbd className="ml-2 px-2 py-0.5 text-xs bg-gray-700 rounded">Ctrl+N</kbd>
         </Button>
       </div>
 
-      <Tabs value={activeTab} onValueChange={(v:any) => setActiveTab(v as ResourceType)} className="space-y-4">
+      <Tabs value={activeTab} onValueChange={(v: any) => setActiveTab(v as ResourceType)} className="space-y-4">
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="meeting_room" className="flex items-center gap-2">
             <DoorOpen className="w-4 h-4" />
@@ -495,13 +495,13 @@ const Resources: React.FC = () => {
                     {searchQuery ? 'No resources found' : 'No resources yet'}
                   </h3>
                   <p className="text-gray-600 mb-4">
-                    {searchQuery 
+                    {searchQuery
                       ? 'Try adjusting your search'
                       : `Create your first ${activeTab.replace('_', ' ')}`
                     }
                   </p>
                   {!searchQuery && (
-                    <Button onClick={() => setOpenCreate(true)} className="bg-gray-800 hover:bg-gray-900">
+                    <Button onClick={() => setOpenCreate(true)} className="bg-gray-700 hover:bg-gray-800 text-white">
                       <Plus className="w-4 h-4 mr-2" />
                       Add Resource
                     </Button>
@@ -601,7 +601,7 @@ const Resources: React.FC = () => {
 
       {/* Create Dialog */}
       <Dialog open={openCreate} onOpenChange={setOpenCreate}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-white">
           <DialogHeader>
             <DialogTitle>Create New Resource</DialogTitle>
             <DialogDescription>
@@ -609,9 +609,10 @@ const Resources: React.FC = () => {
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 mt-4">
-            <div className="space-y-2">
+            <div className="space-y-2 ">
               <Label htmlFor="resource_type">Resource Type</Label>
               <Select
+
                 defaultValue="meeting_room"
                 onValueChange={(value) => setValue('resource_type', value as ResourceType)}
                 disabled={isSubmitting}
@@ -619,7 +620,7 @@ const Resources: React.FC = () => {
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-white">
                   <SelectItem value="meeting_room">Meeting Room</SelectItem>
                   <SelectItem value="phone">Phone</SelectItem>
                   <SelectItem value="laptop">Laptop</SelectItem>
@@ -669,7 +670,7 @@ const Resources: React.FC = () => {
               />
             </div>
 
-            <div className="flex items-center space-x-2">
+            {/* <div className="flex items-center space-x-2">
               <Switch
                 id="is_active"
                 defaultChecked={true}
@@ -677,7 +678,7 @@ const Resources: React.FC = () => {
                 disabled={isSubmitting}
               />
               <Label htmlFor="is_active">Active</Label>
-            </div>
+            </div> */}
 
             <DynamicPropertyFields
               resourceType={type}
@@ -721,7 +722,7 @@ const Resources: React.FC = () => {
 
       {/* Edit Dialog */}
       <Dialog open={openEdit} onOpenChange={setOpenEdit}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-white">
           <DialogHeader>
             <DialogTitle>Edit Resource</DialogTitle>
             <DialogDescription>
@@ -770,11 +771,14 @@ const Resources: React.FC = () => {
               <Switch
                 id="edit_is_active"
                 checked={watchEdit('is_active')}
-                onCheckedChange={(checked:any) => setEditValue('is_active', checked)}
+                onCheckedChange={(checked: boolean) => setEditValue('is_active', checked)}
                 disabled={isEditing}
               />
-              <Label htmlFor="edit_is_active">Active</Label>
+              <Label htmlFor="edit_is_active">
+                {watchEdit('is_active') ? 'Active' : 'Inactive'}
+              </Label>
             </div>
+
 
             <DynamicPropertyFields
               resourceType={editType}
@@ -802,7 +806,7 @@ const Resources: React.FC = () => {
               <Button
                 type="submit"
                 disabled={isEditing}
-                className="flex-1 bg-gray-800 hover:bg-gray-900"
+                className="flex-1 bg-gray-600 hover:bg-gray-700 text-white"
               >
                 {isEditing ? (
                   <>
@@ -820,7 +824,7 @@ const Resources: React.FC = () => {
 
       {/* View Dialog */}
       <Dialog open={openView} onOpenChange={setOpenView}>
-        <DialogContent>
+        <DialogContent className="bg-white">
           <DialogHeader>
             <DialogTitle>Resource Details</DialogTitle>
           </DialogHeader>
@@ -865,7 +869,7 @@ const Resources: React.FC = () => {
 
       {/* Delete Dialog */}
       <AlertDialog open={openDelete} onOpenChange={setOpenDelete}>
-        <AlertDialogContent>
+        <AlertDialogContent className="bg-white">
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Resource</AlertDialogTitle>
             <AlertDialogDescription>

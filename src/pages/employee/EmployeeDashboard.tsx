@@ -278,7 +278,7 @@ const EmployeeDashboard: React.FC = () => {
                                     <div className="flex items-center justify-between">
                                         <div className="flex-1">
                                             <div className="flex items-center gap-2 mb-1">
-                                                <span className="font-medium text-neutral-900">{booking.resource?.name || 'Unknown'}</span>
+                                                <span className="font-medium text-neutral-900">{booking.resource_name || 'Unknown'}</span>
                                                 <Badge variant="secondary" className={`${getStatusBadge(booking.status)} text-xs`}>
                                                     {booking.status.replace('_', ' ').toUpperCase()}
                                                 </Badge>

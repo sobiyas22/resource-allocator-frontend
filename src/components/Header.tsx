@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../store/authStore'
 import { api } from '../lib/api'
 import { Button } from '@/components/ui/button'
-import { GlobalSearch } from './GlobalSearch'
+// import { GlobalSearch } from './GlobalSearch'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -50,7 +50,7 @@ const Header: React.FC = () => {
         </Link>
 
         <div className="flex items-center gap-4">
-          <GlobalSearch />
+          {/* <GlobalSearch /> */}
           <NotificationCenter />
           {user ? (
             <DropdownMenu>

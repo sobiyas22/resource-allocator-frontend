@@ -5,7 +5,7 @@ const Button: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement>> = ({ child
   return (
     <button
       className={clsx(
-        'px-4 py-2 rounded-xl bg-neutral-900 text-white hover:bg-neutral-800 disabled:opacity-60 transition-colors font-medium',
+        'px-4 py-2 rounded-xl bg-neutral-700 text-white hover:bg-neutral-800 disabled:opacity-60 transition-colors font-medium',
         className
       )}
       {...props}
