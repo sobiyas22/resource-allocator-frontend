@@ -152,7 +152,7 @@ const AdminDashboard: React.FC = () => {
           </div>
           <Card className="border-neutral-200 rounded-2xl">
             <CardHeader><Skeleton className="h-6 w-48" /></CardHeader>
-            <CardContent><Skeleton className="h-[300px] w-full" /></CardContent>
+            <CardContent><Skeleton className="h-75 w-full" /></CardContent>
           </Card>
         </div>
       ) : (

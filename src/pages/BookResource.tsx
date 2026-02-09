@@ -272,7 +272,7 @@ const BookResource: React.FC = () => {
 
   // Format time in UTC - readable format
   const formatTime = (timeString: string) => {
-    return dayjs.utc(timeString).format('h:mm A') + ' UTC'
+    return dayjs.utc(timeString).format('h:mm A')
   }
 
   // Compact Slot card component

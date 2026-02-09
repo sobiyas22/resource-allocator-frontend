@@ -12,6 +12,10 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog'
+import dayjs from 'dayjs'
+import utc from 'dayjs/plugin/utc'
+
+dayjs.extend(utc)
 
 interface Booking {
     id: number
@@ -62,14 +66,14 @@ const EmployeeDashboard: React.FC = () => {
             const res = await api.get<{ bookings: Booking[] }>('/bookings')
             const allBookings = res.bookings || []
 
-            const now = new Date()
+            const now = dayjs.utc()
             const active = allBookings.filter(b =>
                 (b.status === 'approved' || b.status === 'checked_in') &&
-                new Date(b.end_time) > now
-            ).sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
+                dayjs.utc(b.end_time).isAfter(now)
+            ).sort((a, b) => dayjs.utc(a.start_time).valueOf() - dayjs.utc(b.start_time).valueOf())
 
             const recent = allBookings
-                .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+                .sort((a, b) => dayjs.utc(b.created_at).valueOf() - dayjs.utc(a.created_at).valueOf())
                 .slice(0, 5)
 
             setActiveBookings(active)
@@ -115,11 +119,26 @@ const EmployeeDashboard: React.FC = () => {
 
     const canCheckIn = (booking: Booking) => {
         if (booking.status !== 'approved' || booking.checked_in_at) return false
-        const now = new Date()
-        const start = new Date(booking.start_time)
-        const end = new Date(booking.end_time)
-        const checkInWindow = new Date(start.getTime() - 15 * 60 * 1000)
-        return now >= checkInWindow && now <= end
+        const now = dayjs.utc()
+        const start = dayjs.utc(booking.start_time)
+        const end = dayjs.utc(booking.end_time)
+        const checkInWindow = start.subtract(15, 'minute')
+        return now.isAfter(checkInWindow) && now.isBefore(end)
+    }
+
+    // Format date in UTC
+    const formatDate = (dateString: string) => {
+        return dayjs.utc(dateString).format('MMM D, YYYY')
+    }
+
+    // Format time in UTC
+    const formatTime = (dateString: string) => {
+        return dayjs.utc(dateString).format('h:mm A')
+    }
+
+    // Format date and time together
+    const formatDateTime = (dateString: string) => {
+        return dayjs.utc(dateString).format('MMM D, YYYY h:mm A')
     }
 
     return (
@@ -203,18 +222,12 @@ const EmployeeDashboard: React.FC = () => {
                                             <div className="grid grid-cols-2 gap-4 text-sm">
                                                 <div className="flex items-center gap-2 text-neutral-500">
                                                     <Calendar className="w-4 h-4" />
-                                                    <span>{new Date(booking.start_time).toLocaleDateString()}</span>
+                                                    <span>{formatDate(booking.start_time)}</span>
                                                 </div>
                                                 <div className="flex items-center gap-2 text-neutral-500">
                                                     <Clock className="w-4 h-4" />
                                                     <span>
-                                                        {new Date(booking.start_time).toLocaleTimeString([], {
-                                                            hour: '2-digit', minute: '2-digit', hour12: true,
-                                                            timeZone: 'Asia/Kolkata'
-                                                        })} - {new Date(booking.end_time).toLocaleTimeString([], {
-                                                            hour: '2-digit', minute: '2-digit', hour12: true,
-                                                            timeZone: 'Asia/Kolkata'
-                                                        })}
+                                                        {formatTime(booking.start_time)} - {formatTime(booking.end_time)}
                                                     </span>
                                                 </div>
                                                 {booking.resource?.location && (
@@ -284,7 +297,7 @@ const EmployeeDashboard: React.FC = () => {
                                                 </Badge>
                                             </div>
                                             <div className="flex items-center gap-4 text-sm text-neutral-500">
-                                                <span>{new Date(booking.start_time).toLocaleString()}</span>
+                                                <span>{formatDateTime(booking.start_time)}</span>
                                                 {booking.checked_in_at && (
                                                     <div className="flex items-center gap-1 text-emerald-600">
                                                         <CheckCircle className="w-3 h-3" />
@@ -343,12 +356,12 @@ const EmployeeDashboard: React.FC = () => {
 
                                     <div>
                                         <div className="text-xs font-semibold text-neutral-400 uppercase mb-1">Start Time</div>
-                                        <div className="text-sm text-neutral-900">{new Date(selectedBooking.start_time).toLocaleString()}</div>
+                                        <div className="text-sm text-neutral-900">{formatDateTime(selectedBooking.start_time)}</div>
                                     </div>
 
                                     <div>
                                         <div className="text-xs font-semibold text-neutral-400 uppercase mb-1">End Time</div>
-                                        <div className="text-sm text-neutral-900">{new Date(selectedBooking.end_time).toLocaleString()}</div>
+                                        <div className="text-sm text-neutral-900">{formatDateTime(selectedBooking.end_time)}</div>
                                     </div>
 
                                     {selectedBooking.resource?.location && (
@@ -363,7 +376,7 @@ const EmployeeDashboard: React.FC = () => {
                                         {selectedBooking.checked_in_at ? (
                                             <div className="flex items-center gap-2 text-emerald-600">
                                                 <CheckCircle className="w-4 h-4" />
-                                                <span className="text-sm">{new Date(selectedBooking.checked_in_at).toLocaleString()}</span>
+                                                <span className="text-sm">{formatDateTime(selectedBooking.checked_in_at)}</span>
                                             </div>
                                         ) : (
                                             <div className="flex items-center gap-2 text-neutral-400">
