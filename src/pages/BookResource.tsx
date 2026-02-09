@@ -88,28 +88,24 @@ const resourceCategories = [
     title: 'Meeting Rooms',
     icon: DoorOpen,
     description: 'Conference spaces with projectors',
-    gradient: 'from-indigo-500 to-purple-500'
   },
   {
     type: 'phone' as const,
     title: 'Phones',
     icon: Smartphone,
     description: 'Mobile devices for testing',
-    gradient: 'from-emerald-500 to-teal-500'
   },
   {
     type: 'laptop' as const,
     title: 'Laptops',
     icon: Laptop,
     description: 'Portable workstations',
-    gradient: 'from-amber-500 to-orange-500'
   },
   {
     type: 'turf' as const,
     title: 'Turf',
     icon: Sprout,
     description: 'Outdoor recreational space',
-    gradient: 'from-green-500 to-lime-500'
   }
 ]
 
@@ -139,8 +135,6 @@ const BookResource: React.FC = () => {
 
   async function fetchHolidays() {
     try {
-      // const res = await api.get<{ holidays: { holiday_date: string }[] }>('/holidays')
-      // setHolidays(res.holidays.map(h => h.holiday_date))
       setHolidays([])
     } catch (err) {
       console.error('Failed to fetch holidays:', err)
@@ -170,8 +164,6 @@ const BookResource: React.FC = () => {
       const res = await api.get<AvailabilityResponse>(
         `/resources/${selectedResource.id}/availability?date=${dateStr}&duration=${duration}`
       )
-      
-      // Backend returns: { resource_id, resource_name, query_date, slot_duration_hours, available_slots }
       setSlots(res.available_slots || [])
     } catch (err: any) {
       toast.error('Failed to load available slots')
@@ -230,8 +222,7 @@ const BookResource: React.FC = () => {
       navigate('/dashboard/employee/bookings')
     } catch (err: any) {
       const errorMsg = err.message || 'Failed to create booking'
-      
-      // Backend returns alternatives on conflict
+
       if (err.response?.data?.suggestions) {
         const { available_resources, available_slots } = err.response.data.suggestions
         setAlternatives({
@@ -254,31 +245,21 @@ const BookResource: React.FC = () => {
   const isDateDisabled = (date: Date) => {
     const day = date.getDay()
     if (day === 0 || day === 6) return true
-    
     const dateStr = dayjs(date).format('YYYY-MM-DD')
     if (holidays.includes(dateStr)) return true
-    
     if (dayjs(date).isBefore(dayjs(), 'day')) return true
-    
     return false
   }
 
   const now = dayjs()
   const isToday = dayjs(selectedDate).isSame(now, 'day')
-  
-  // Categorize slots
+
   const categorizedSlots = slots.reduce((acc, slot) => {
     const slotStart = dayjs(slot.start)
     const isPast = isToday && slotStart.isBefore(now)
-    
-    if (isPast) {
-      acc.past.push(slot)
-    } else if (slot.available) {
-      acc.available.push(slot)
-    } else {
-      acc.booked.push(slot)
-    }
-    
+    if (isPast) acc.past.push(slot)
+    else if (slot.available) acc.available.push(slot)
+    else acc.booked.push(slot)
     return acc
   }, { available: [] as TimeSlot[], booked: [] as TimeSlot[], past: [] as TimeSlot[] })
 
@@ -288,18 +269,18 @@ const BookResource: React.FC = () => {
 
   return (
     <div className="max-w-6xl mx-auto">
-      <Breadcrumbs 
+      <Breadcrumbs
         items={[
           { label: 'Employee Dashboard', href: '/dashboard/employee' },
           { label: 'Book Resource' }
-        ]} 
+        ]}
       />
 
       <div className="mb-8">
-        <h1 className="text-4xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent mb-2" style={{ fontFamily: "'Playfair Display', serif" }}>
+        <h1 className="text-4xl font-bold text-neutral-900 mb-2" style={{ fontFamily: "'Playfair Display', serif" }}>
           Book a Resource
         </h1>
-        <p className="text-gray-600">
+        <p className="text-neutral-500">
           Select a resource type and time slot for your booking
         </p>
       </div>
@@ -308,7 +289,7 @@ const BookResource: React.FC = () => {
         <Button
           variant="outline"
           onClick={handleBack}
-          className="mb-6 hover:bg-indigo-50 border-indigo-200"
+          className="mb-6 hover:bg-neutral-50 border-neutral-200 text-neutral-700"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back
@@ -323,19 +304,19 @@ const BookResource: React.FC = () => {
             return (
               <Card
                 key={category.type}
-                className="cursor-pointer hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border-2 hover:border-indigo-300"
+                className="cursor-pointer hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border border-neutral-200 hover:border-neutral-400 bg-white"
                 onClick={() => handleCategorySelect(category.type)}
               >
                 <CardHeader className="text-center pb-4">
-                  <div className={`mx-auto w-20 h-20 bg-gradient-to-br ${category.gradient} rounded-2xl flex items-center justify-center mb-4 shadow-lg`}>
+                  <div className="mx-auto w-20 h-20 bg-neutral-950 rounded-2xl flex items-center justify-center mb-4 shadow-lg">
                     <Icon className="w-10 h-10 text-white" />
                   </div>
-                  <CardTitle className="text-xl text-gray-900">
+                  <CardTitle className="text-xl text-neutral-900">
                     {category.title}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <CardDescription className="text-center text-gray-600">
+                  <CardDescription className="text-center text-neutral-500">
                     {category.description}
                   </CardDescription>
                 </CardContent>
@@ -348,34 +329,25 @@ const BookResource: React.FC = () => {
       {/* Step 2: Resource Selection */}
       {step === 'resource' && (
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">
+          <h2 className="text-2xl font-bold text-neutral-900 mb-6">
             Select {resourceCategories.find(c => c.type === selectedCategory)?.title}
           </h2>
 
           {loading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {[1, 2, 3].map(i => (
-                <Card key={i}>
-                  <CardHeader>
-                    <Skeleton className="h-6 w-3/4 mb-2" />
-                    <Skeleton className="h-4 w-1/2" />
-                  </CardHeader>
-                  <CardContent>
-                    <Skeleton className="h-20 w-full" />
-                  </CardContent>
+                <Card key={i} className="border-neutral-200">
+                  <CardHeader><Skeleton className="h-6 w-3/4 mb-2" /><Skeleton className="h-4 w-1/2" /></CardHeader>
+                  <CardContent><Skeleton className="h-20 w-full" /></CardContent>
                 </Card>
               ))}
             </div>
           ) : resources.length === 0 ? (
-            <Card className="text-center py-12">
+            <Card className="text-center py-12 border-neutral-200">
               <CardContent>
-                <AlertCircle className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">
-                  No resources available
-                </h3>
-                <p className="text-gray-600">
-                  There are no active resources in this category.
-                </p>
+                <AlertCircle className="w-16 h-16 text-neutral-300 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-neutral-900 mb-2">No resources available</h3>
+                <p className="text-neutral-500">There are no active resources in this category.</p>
               </CardContent>
             </Card>
           ) : (
@@ -383,21 +355,20 @@ const BookResource: React.FC = () => {
               {resources.map((resource) => {
                 const category = resourceCategories.find(c => c.type === selectedCategory)
                 const Icon = category?.icon || DoorOpen
-                
                 return (
                   <Card
                     key={resource.id}
-                    className="cursor-pointer hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border-2 hover:border-indigo-300"
+                    className="cursor-pointer hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border border-neutral-200 hover:border-neutral-400 bg-white"
                     onClick={() => handleResourceSelect(resource)}
                   >
                     <CardHeader>
                       <div className="flex items-start gap-3">
-                        <div className={`w-12 h-12 bg-gradient-to-br ${category?.gradient} rounded-xl flex items-center justify-center flex-shrink-0`}>
+                        <div className="w-12 h-12 bg-neutral-900 rounded-xl flex items-center justify-center flex-shrink-0">
                           <Icon className="w-6 h-6 text-white" />
                         </div>
                         <div className="flex-1">
-                          <CardTitle className="text-lg text-gray-900">{resource.name}</CardTitle>
-                          <p className="text-sm text-gray-500 flex items-center gap-1 mt-1">
+                          <CardTitle className="text-lg text-neutral-900">{resource.name}</CardTitle>
+                          <p className="text-sm text-neutral-500 flex items-center gap-1 mt-1">
                             <MapPin className="w-3 h-3" />
                             {resource.location}
                           </p>
@@ -406,13 +377,13 @@ const BookResource: React.FC = () => {
                     </CardHeader>
                     <CardContent>
                       {resource.description && (
-                        <p className="text-sm text-gray-600 mb-3">{resource.description}</p>
+                        <p className="text-sm text-neutral-500 mb-3">{resource.description}</p>
                       )}
-                      <div className="bg-indigo-50 rounded-lg p-3 space-y-1">
+                      <div className="bg-neutral-50 rounded-lg p-3 space-y-1 border border-neutral-100">
                         {resource.resource_type === 'meeting-room' && resource.properties?.capacity && (
                           <div className="flex justify-between text-sm">
-                            <span className="text-gray-600">Capacity</span>
-                            <span className="font-medium text-gray-900">{resource.properties.capacity} people</span>
+                            <span className="text-neutral-500">Capacity</span>
+                            <span className="font-medium text-neutral-900">{resource.properties.capacity} people</span>
                           </div>
                         )}
                         {resource.resource_type === 'meeting-room' && resource.properties?.has_projector && (
@@ -423,8 +394,8 @@ const BookResource: React.FC = () => {
                         )}
                         {(resource.resource_type === 'phone' || resource.resource_type === 'laptop') && (
                           <div className="flex justify-between text-sm">
-                            <span className="text-gray-600">Model</span>
-                            <span className="font-medium text-gray-900">
+                            <span className="text-neutral-500">Model</span>
+                            <span className="font-medium text-neutral-900">
                               {resource.properties?.brand} {resource.properties?.model}
                             </span>
                           </div>
@@ -442,44 +413,36 @@ const BookResource: React.FC = () => {
       {/* Step 3: Slot Selection */}
       {step === 'slots' && selectedResource && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left: Calendar & Settings */}
           <div className="lg:col-span-1 space-y-6">
-            <Card className="shadow-lg border-indigo-200">
-              <CardHeader className="bg-gradient-to-r from-indigo-50 to-purple-50">
-                <CardTitle className="text-lg">Select Date & Duration</CardTitle>
+            <Card className="shadow-sm border-neutral-200">
+              <CardHeader className="bg-neutral-50 border-b border-neutral-100">
+                <CardTitle className="text-lg text-neutral-900">Select Date & Duration</CardTitle>
               </CardHeader>
               <CardContent className="p-4 space-y-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">Date</label>
+                  <label className="text-sm font-medium text-neutral-700">Date</label>
                   <Calendar
                     mode="single"
                     selected={selectedDate}
                     onSelect={(date) => date && setSelectedDate(date)}
                     disabled={isDateDisabled}
-                    className="rounded-md border"
+                    className="rounded-md border border-neutral-200"
                   />
                 </div>
-
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">Duration</label>
-                  <Select
-                    value={String(duration)}
-                    onValueChange={(value) => setDuration(Number(value) as 0.5 | 1)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
+                  <label className="text-sm font-medium text-neutral-700">Duration</label>
+                  <Select value={String(duration)} onValueChange={(value) => setDuration(Number(value) as 0.5 | 1)}>
+                    <SelectTrigger className="border-neutral-200"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="0.5">30 minutes</SelectItem>
                       <SelectItem value="1">1 hour</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <div className="bg-neutral-50 border border-neutral-200 rounded-lg p-3">
                   <div className="flex items-start gap-2">
-                    <Info className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
-                    <p className="text-xs text-blue-800">
+                    <Info className="w-4 h-4 text-neutral-500 mt-0.5 flex-shrink-0" />
+                    <p className="text-xs text-neutral-600">
                       Bookings are available Mon-Fri, 9 AM - 6 PM. Weekends and holidays are blocked.
                     </p>
                   </div>
@@ -487,21 +450,20 @@ const BookResource: React.FC = () => {
               </CardContent>
             </Card>
 
-            {/* Selected Resource Info */}
-            <Card className="shadow-lg border-indigo-200">
-              <CardHeader className="bg-gradient-to-r from-indigo-50 to-purple-50">
-                <CardTitle className="text-lg">Selected Resource</CardTitle>
+            <Card className="shadow-sm border-neutral-200">
+              <CardHeader className="bg-neutral-50 border-b border-neutral-100">
+                <CardTitle className="text-lg text-neutral-900">Selected Resource</CardTitle>
               </CardHeader>
               <CardContent className="p-4">
                 <div className="space-y-3">
                   <div>
-                    <p className="text-sm text-gray-600">Name</p>
-                    <p className="font-semibold text-gray-900">{selectedResource.name}</p>
+                    <p className="text-sm text-neutral-500">Name</p>
+                    <p className="font-semibold text-neutral-900">{selectedResource.name}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">Location</p>
-                    <p className="font-medium text-gray-900 flex items-center gap-1">
-                      <MapPin className="w-4 h-4 text-indigo-600" />
+                    <p className="text-sm text-neutral-500">Location</p>
+                    <p className="font-medium text-neutral-900 flex items-center gap-1">
+                      <MapPin className="w-4 h-4 text-neutral-400" />
                       {selectedResource.location}
                     </p>
                   </div>
@@ -510,38 +472,29 @@ const BookResource: React.FC = () => {
             </Card>
           </div>
 
-          {/* Right: Time Slots */}
           <div className="lg:col-span-2">
-            <Card className="shadow-lg border-indigo-200">
-              <CardHeader className="bg-gradient-to-r from-indigo-50 to-purple-50">
+            <Card className="shadow-sm border-neutral-200">
+              <CardHeader className="bg-neutral-50 border-b border-neutral-100">
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      <Clock className="w-5 h-5 text-indigo-600" />
+                    <CardTitle className="text-lg flex items-center gap-2 text-neutral-900">
+                      <Clock className="w-5 h-5 text-neutral-500" />
                       Time Slots - {dayjs(selectedDate).format('MMMM D, YYYY')}
                     </CardTitle>
-                    <CardDescription className="mt-1">
-                      Click on an available slot to select it
-                    </CardDescription>
+                    <CardDescription className="mt-1 text-neutral-500">Click on an available slot to select it</CardDescription>
                   </div>
                 </div>
               </CardHeader>
               <CardContent className="p-6">
                 {loadingSlots ? (
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                    {[1, 2, 3, 4, 5, 6].map(i => (
-                      <Skeleton key={i} className="h-20 w-full" />
-                    ))}
+                    {[1, 2, 3, 4, 5, 6].map(i => (<Skeleton key={i} className="h-20 w-full" />))}
                   </div>
                 ) : slots.length === 0 ? (
                   <div className="text-center py-12">
-                    <XCircle className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">
-                      No slots available
-                    </h3>
-                    <p className="text-gray-600">
-                      Try selecting a different date or duration.
-                    </p>
+                    <XCircle className="w-16 h-16 text-neutral-300 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-neutral-900 mb-2">No slots available</h3>
+                    <p className="text-neutral-500">Try selecting a different date or duration.</p>
                   </div>
                 ) : (
                   <>
@@ -551,14 +504,14 @@ const BookResource: React.FC = () => {
                         <p className="text-2xl font-bold text-emerald-700">{availableCount}</p>
                         <p className="text-xs text-emerald-600 mt-1">Available</p>
                       </div>
-                      <div className="bg-rose-50 border border-rose-200 rounded-lg p-3 text-center">
-                        <p className="text-2xl font-bold text-rose-700">{bookedCount}</p>
-                        <p className="text-xs text-rose-600 mt-1">Booked</p>
+                      <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-center">
+                        <p className="text-2xl font-bold text-red-700">{bookedCount}</p>
+                        <p className="text-xs text-red-600 mt-1">Booked</p>
                       </div>
                       {isToday && (
-                        <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-center">
-                          <p className="text-2xl font-bold text-gray-700">{pastCount}</p>
-                          <p className="text-xs text-gray-600 mt-1">Past</p>
+                        <div className="bg-neutral-50 border border-neutral-200 rounded-lg p-3 text-center">
+                          <p className="text-2xl font-bold text-neutral-700">{pastCount}</p>
+                          <p className="text-xs text-neutral-500 mt-1">Past</p>
                         </div>
                       )}
                     </div>
@@ -567,31 +520,26 @@ const BookResource: React.FC = () => {
                     {availableCount > 0 && (
                       <div className="mb-6">
                         <h4 className="text-sm font-semibold text-emerald-700 mb-3 flex items-center gap-2">
-                          <CheckCircle className="w-4 h-4" />
-                          Available Slots ({availableCount})
+                          <CheckCircle className="w-4 h-4" /> Available Slots ({availableCount})
                         </h4>
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                           {categorizedSlots.available.map((slot, index) => {
                             const isSelected = selectedSlot?.start === slot.start
-                            
                             return (
                               <button
                                 key={index}
                                 onClick={() => setSelectedSlot(slot)}
-                                className={`
-                                  p-4 rounded-xl border-2 transition-all duration-200
-                                  ${isSelected 
-                                    ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white border-indigo-500 shadow-lg scale-105' 
-                                    : 'bg-white border-emerald-200 hover:border-indigo-400 hover:bg-indigo-50 hover:scale-105'
-                                  }
-                                `}
+                                className={`p-4 rounded-xl border-2 transition-all duration-200 ${isSelected
+                                  ? 'bg-neutral-900 text-white border-neutral-900 shadow-lg scale-105'
+                                  : 'bg-white border-neutral-200 hover:border-neutral-400 hover:bg-neutral-50 hover:scale-105'
+                                }`}
                               >
                                 <div className="flex flex-col items-center gap-1">
-                                  <Clock className={`w-5 h-5 ${isSelected ? 'text-white' : 'text-emerald-600'}`} />
-                                  <span className={`font-semibold text-sm ${isSelected ? 'text-white' : 'text-gray-900'}`}>
+                                  <Clock className={`w-5 h-5 ${isSelected ? 'text-white' : 'text-neutral-500'}`} />
+                                  <span className={`font-semibold text-sm ${isSelected ? 'text-white' : 'text-neutral-900'}`}>
                                     {dayjs(slot.start).format('h:mm A')}
                                   </span>
-                                  <span className={`text-xs ${isSelected ? 'text-white/90' : 'text-gray-500'}`}>
+                                  <span className={`text-xs ${isSelected ? 'text-white/80' : 'text-neutral-400'}`}>
                                     {duration === 0.5 ? '30 min' : '1 hour'}
                                   </span>
                                 </div>
@@ -605,24 +553,16 @@ const BookResource: React.FC = () => {
                     {/* Booked Slots */}
                     {bookedCount > 0 && (
                       <div className="mb-6">
-                        <h4 className="text-sm font-semibold text-rose-700 mb-3 flex items-center gap-2">
-                          <XCircle className="w-4 h-4" />
-                          Booked Slots ({bookedCount})
+                        <h4 className="text-sm font-semibold text-red-700 mb-3 flex items-center gap-2">
+                          <XCircle className="w-4 h-4" /> Booked Slots ({bookedCount})
                         </h4>
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                           {categorizedSlots.booked.map((slot, index) => (
-                            <div
-                              key={index}
-                              className="p-4 rounded-xl border-2 bg-rose-50 border-rose-200 opacity-60 cursor-not-allowed"
-                            >
+                            <div key={index} className="p-4 rounded-xl border-2 bg-red-50 border-red-200 opacity-60 cursor-not-allowed">
                               <div className="flex flex-col items-center gap-1">
-                                <Clock className="w-5 h-5 text-rose-400" />
-                                <span className="font-semibold text-sm text-gray-700">
-                                  {dayjs(slot.start).format('h:mm A')}
-                                </span>
-                                <Badge variant="secondary" className="text-xs bg-rose-200 text-rose-700">
-                                  Booked
-                                </Badge>
+                                <Clock className="w-5 h-5 text-red-400" />
+                                <span className="font-semibold text-sm text-neutral-700">{dayjs(slot.start).format('h:mm A')}</span>
+                                <Badge variant="secondary" className="text-xs bg-red-100 text-red-700 border border-red-200">Booked</Badge>
                               </div>
                             </div>
                           ))}
@@ -630,27 +570,19 @@ const BookResource: React.FC = () => {
                       </div>
                     )}
 
-                    {/* Past Slots (Today only) */}
+                    {/* Past Slots */}
                     {isToday && pastCount > 0 && (
                       <div className="mb-6">
-                        <h4 className="text-sm font-semibold text-gray-600 mb-3 flex items-center gap-2">
-                          <Clock className="w-4 h-4" />
-                          Past Slots ({pastCount})
+                        <h4 className="text-sm font-semibold text-neutral-500 mb-3 flex items-center gap-2">
+                          <Clock className="w-4 h-4" /> Past Slots ({pastCount})
                         </h4>
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                           {categorizedSlots.past.map((slot, index) => (
-                            <div
-                              key={index}
-                              className="p-4 rounded-xl border-2 bg-gray-50 border-gray-200 opacity-50 cursor-not-allowed"
-                            >
+                            <div key={index} className="p-4 rounded-xl border-2 bg-neutral-50 border-neutral-200 opacity-50 cursor-not-allowed">
                               <div className="flex flex-col items-center gap-1">
-                                <Clock className="w-5 h-5 text-gray-400" />
-                                <span className="font-semibold text-sm text-gray-600">
-                                  {dayjs(slot.start).format('h:mm A')}
-                                </span>
-                                <Badge variant="secondary" className="text-xs">
-                                  Past
-                                </Badge>
+                                <Clock className="w-5 h-5 text-neutral-400" />
+                                <span className="font-semibold text-sm text-neutral-500">{dayjs(slot.start).format('h:mm A')}</span>
+                                <Badge variant="secondary" className="text-xs bg-neutral-100 text-neutral-500 border border-neutral-200">Past</Badge>
                               </div>
                             </div>
                           ))}
@@ -660,65 +592,37 @@ const BookResource: React.FC = () => {
 
                     {/* Booking Summary */}
                     {selectedSlot && (
-                      <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border-2 border-indigo-200 rounded-xl p-6 mt-6">
-                        <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                          <CheckCircle className="w-5 h-5 text-emerald-600" />
-                          Booking Summary
+                      <div className="bg-neutral-50 border-2 border-neutral-200 rounded-xl p-6 mt-6">
+                        <h4 className="font-semibold text-neutral-900 mb-4 flex items-center gap-2">
+                          <CheckCircle className="w-5 h-5 text-emerald-600" /> Booking Summary
                         </h4>
                         <div className="space-y-3">
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Resource</span>
-                            <span className="font-medium text-gray-900">{selectedResource.name}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Date</span>
-                            <span className="font-medium text-gray-900">
-                              {dayjs(selectedDate).format('MMMM D, YYYY')}
-                            </span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Time</span>
-                            <span className="font-medium text-gray-900">
-                              {dayjs(selectedSlot.start).format('h:mm A')} - {dayjs(selectedSlot.end).format('h:mm A')}
-                            </span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Duration</span>
-                            <span className="font-medium text-gray-900">{duration === 0.5 ? '30 minutes' : '1 hour'}</span>
-                          </div>
+                          <div className="flex justify-between"><span className="text-neutral-500">Resource</span><span className="font-medium text-neutral-900">{selectedResource.name}</span></div>
+                          <div className="flex justify-between"><span className="text-neutral-500">Date</span><span className="font-medium text-neutral-900">{dayjs(selectedDate).format('MMMM D, YYYY')}</span></div>
+                          <div className="flex justify-between"><span className="text-neutral-500">Time</span><span className="font-medium text-neutral-900">{dayjs(selectedSlot.start).format('h:mm A')} - {dayjs(selectedSlot.end).format('h:mm A')}</span></div>
+                          <div className="flex justify-between"><span className="text-neutral-500">Duration</span><span className="font-medium text-neutral-900">{duration === 0.5 ? '30 minutes' : '1 hour'}</span></div>
                         </div>
                         <Button
                           onClick={handleBooking}
                           disabled={isBooking}
-                          className="w-full mt-6 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white h-12"
+                          className="w-full mt-6 bg-neutral-900 hover:bg-neutral-800 text-white h-12"
                         >
                           {isBooking ? (
-                            <>
-                              <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                              Submitting Request...
-                            </>
+                            <><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />Submitting Request...</>
                           ) : (
-                            <>
-                              <CheckCircle className="w-5 h-5 mr-2" />
-                              Submit Booking Request
-                            </>
+                            <><CheckCircle className="w-5 h-5 mr-2" />Submit Booking Request</>
                           )}
                         </Button>
-                        <p className="text-xs text-gray-600 mt-3 text-center">
-                          Your request will be sent to admin for approval
-                        </p>
+                        <p className="text-xs text-neutral-500 mt-3 text-center">Your request will be sent to admin for approval</p>
                       </div>
                     )}
 
-                    {/* No available slots message */}
                     {availableCount === 0 && (
                       <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start gap-3">
                         <Lightbulb className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
                         <div>
                           <p className="text-sm font-medium text-amber-900">No available slots for this date</p>
-                          <p className="text-xs text-amber-700 mt-1">
-                            Try selecting a different date or duration to find available slots.
-                          </p>
+                          <p className="text-xs text-amber-700 mt-1">Try selecting a different date or duration to find available slots.</p>
                         </div>
                       </div>
                     )}
@@ -732,22 +636,20 @@ const BookResource: React.FC = () => {
 
       {/* Alternatives Dialog */}
       <Dialog open={showAlternatives} onOpenChange={setShowAlternatives}>
-        <DialogContent className="max-w-2xl bg-white/95 backdrop-blur-sm">
+        <DialogContent className="max-w-2xl bg-white border border-neutral-200">
           <DialogHeader>
-            <DialogTitle className="text-xl text-amber-600">Alternative Options Available</DialogTitle>
-            <DialogDescription>
-              The selected slot is no longer available. Here are some alternatives:
-            </DialogDescription>
+            <DialogTitle className="text-xl text-amber-700">Alternative Options Available</DialogTitle>
+            <DialogDescription className="text-neutral-500">The selected slot is no longer available. Here are some alternatives:</DialogDescription>
           </DialogHeader>
           <div className="space-y-6 mt-4">
             {alternatives.resources.length > 0 && (
               <div>
-                <h4 className="font-semibold text-gray-900 mb-3">Similar Resources</h4>
+                <h4 className="font-semibold text-neutral-900 mb-3">Similar Resources</h4>
                 <div className="space-y-2">
                   {alternatives.resources.map((res) => (
-                    <div key={res.id} className="bg-indigo-50 border border-indigo-200 rounded-lg p-3">
-                      <p className="font-medium text-gray-900">{res.name}</p>
-                      <p className="text-sm text-gray-600">{res.location}</p>
+                    <div key={res.id} className="bg-neutral-50 border border-neutral-200 rounded-lg p-3">
+                      <p className="font-medium text-neutral-900">{res.name}</p>
+                      <p className="text-sm text-neutral-500">{res.location}</p>
                     </div>
                   ))}
                 </div>
@@ -755,13 +657,11 @@ const BookResource: React.FC = () => {
             )}
             {alternatives.slots.length > 0 && (
               <div>
-                <h4 className="font-semibold text-gray-900 mb-3">Available Time Slots</h4>
+                <h4 className="font-semibold text-neutral-900 mb-3">Available Time Slots</h4>
                 <div className="grid grid-cols-3 gap-2">
                   {alternatives.slots.map((slot, idx) => (
                     <div key={idx} className="bg-emerald-50 border border-emerald-200 rounded-lg p-2 text-center">
-                      <p className="text-sm font-medium text-emerald-700">
-                        {dayjs(slot.start).format('h:mm A')}
-                      </p>
+                      <p className="text-sm font-medium text-emerald-700">{dayjs(slot.start).format('h:mm A')}</p>
                     </div>
                   ))}
                 </div>

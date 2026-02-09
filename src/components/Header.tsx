@@ -25,12 +25,10 @@ const Header: React.FC = () => {
 
   async function onLogout() {
     if (isLoggingOut) return
-
     setIsLoggingOut(true)
     logout()
     navigate('/login', { replace: true })
     toast.success('Logged out successfully')
-
     try {
       await api.del('/auth/logout')
     } catch (err) {
@@ -41,71 +39,71 @@ const Header: React.FC = () => {
   }
 
   return (
-    <header className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-50">
+    <header className="bg-white border-b border-neutral-200 shadow-sm sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-        <Link 
-          to="/" 
-          className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent hover:from-indigo-700 hover:to-purple-700 transition-all"
+        <Link
+          to="/"
+          className="text-2xl font-bold text-neutral-900 hover:text-neutral-700 transition-colors"
           style={{ fontFamily: "'Playfair Display', serif" }}
         >
           Smart Resource Allocation
         </Link>
-        
+
         <div className="flex items-center gap-4">
           <GlobalSearch />
           <NotificationCenter />
           {user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button 
-                  variant="outline" 
-                  className="flex items-center gap-2 border-gray-300 hover:bg-indigo-50 hover:border-indigo-300 transition-all"
+                <Button
+                  variant="outline"
+                  className="flex items-center gap-2 border-neutral-300 hover:bg-neutral-50 hover:border-neutral-400 transition-all rounded-xl"
                 >
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white font-medium">
+                  <div className="w-8 h-8 rounded-full bg-neutral-900 flex items-center justify-center text-white font-medium text-sm">
                     {user.name.charAt(0).toUpperCase()}
                   </div>
-                  <span className="font-medium text-gray-700">{user.name}</span>
-                  <ChevronDown className="w-4 h-4 text-gray-500" />
+                  <span className="font-medium text-neutral-700">{user.name}</span>
+                  <ChevronDown className="w-4 h-4 text-neutral-400" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-72 bg-white">
+              <DropdownMenuContent align="end" className="w-72 bg-white rounded-xl shadow-lg border border-neutral-200">
                 <DropdownMenuLabel className="pb-3">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white font-bold text-lg">
+                    <div className="w-12 h-12 rounded-xl bg-neutral-900 flex items-center justify-center text-white font-bold text-lg">
                       {user.name.charAt(0).toUpperCase()}
                     </div>
                     <div className="flex-1">
-                      <p className="font-semibold text-gray-900">{user.name}</p>
-                      <p className="text-sm text-gray-500 flex items-center gap-1 mt-0.5">
+                      <p className="font-semibold text-neutral-900">{user.name}</p>
+                      <p className="text-sm text-neutral-500 flex items-center gap-1 mt-0.5">
                         <Mail className="w-3 h-3" />
                         {user.email}
                       </p>
                     </div>
                   </div>
                 </DropdownMenuLabel>
-                
+
                 <DropdownMenuSeparator />
-                
+
                 <div className="px-2 py-2">
-                  <div className="bg-indigo-50 rounded-lg p-3 space-y-2">
+                  <div className="bg-neutral-50 rounded-xl p-3 space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">Role</span>
-                      <Badge className="bg-gradient-to-r from-indigo-500 to-purple-500">
+                      <span className="text-sm text-neutral-500">Role</span>
+                      <Badge className="bg-neutral-900 text-white hover:bg-neutral-800">
                         <Shield className="w-3 h-3 mr-1" />
                         {user.role}
                       </Badge>
                     </div>
                     {(user as any).employee_id && (
                       <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-600">Employee ID</span>
-                        <span className="text-sm font-mono font-medium text-gray-900">
+                        <span className="text-sm text-neutral-500">Employee ID</span>
+                        <span className="text-sm font-mono font-medium text-neutral-900">
                           {(user as any).employee_id}
                         </span>
                       </div>
                     )}
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">Member Since</span>
-                      <span className="text-sm font-medium text-gray-900 flex items-center gap-1">
+                      <span className="text-sm text-neutral-500">Member Since</span>
+                      <span className="text-sm font-medium text-neutral-900 flex items-center gap-1">
                         <Calendar className="w-3 h-3" />
                         {new Date((user as any).created_at || Date.now()).toLocaleDateString()}
                       </span>
@@ -114,11 +112,11 @@ const Header: React.FC = () => {
                 </div>
 
                 <DropdownMenuSeparator />
-                
-                <DropdownMenuItem 
+
+                <DropdownMenuItem
                   onClick={onLogout}
                   disabled={isLoggingOut}
-                  className="text-red-600 focus:text-red-700 focus:bg-red-50 cursor-pointer"
+                  className="text-red-600 focus:text-red-700 focus:bg-red-50 cursor-pointer rounded-lg"
                 >
                   {isLoggingOut ? (
                     <>
@@ -136,7 +134,7 @@ const Header: React.FC = () => {
             </DropdownMenu>
           ) : (
             <Link to="/login">
-              <Button className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white">
+              <Button className="bg-neutral-900 hover:bg-neutral-800 text-white rounded-xl">
                 Sign In
               </Button>
             </Link>

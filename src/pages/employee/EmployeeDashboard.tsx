@@ -38,6 +38,15 @@ interface Booking {
     }
 }
 
+const statusBadgeStyles: Record<string, string> = {
+    pending:    'bg-amber-50 text-amber-700 border border-amber-200',
+    approved:   'bg-blue-50 text-blue-700 border border-blue-200',
+    rejected:   'bg-red-50 text-red-700 border border-red-200',
+    checked_in: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
+    completed:  'bg-violet-50 text-violet-700 border border-violet-200',
+    cancelled:  'bg-neutral-100 text-neutral-500 border border-neutral-200',
+}
+
 const EmployeeDashboard: React.FC = () => {
     const navigate = useNavigate()
     const [activeBookings, setActiveBookings] = useState<Booking[]>([])
@@ -53,14 +62,12 @@ const EmployeeDashboard: React.FC = () => {
             const res = await api.get<{ bookings: Booking[] }>('/bookings')
             const allBookings = res.bookings || []
 
-            // Active bookings: approved or checked_in, with future or current times
             const now = new Date()
             const active = allBookings.filter(b =>
                 (b.status === 'approved' || b.status === 'checked_in') &&
                 new Date(b.end_time) > now
             ).sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
 
-            // Recent bookings: last 5 bookings of any status
             const recent = allBookings
                 .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
                 .slice(0, 5)
@@ -103,15 +110,7 @@ const EmployeeDashboard: React.FC = () => {
     }
 
     const getStatusBadge = (status: string) => {
-        const colors: Record<string, string> = {
-            pending: 'bg-yellow-100 text-yellow-800',
-            approved: 'bg-blue-100 text-blue-800',
-            rejected: 'bg-red-100 text-red-800',
-            checked_in: 'bg-green-100 text-green-800',
-            completed: 'bg-purple-100 text-purple-800',
-            cancelled: 'bg-gray-100 text-gray-800'
-        }
-        return colors[status] || 'bg-gray-100 text-gray-800'
+        return statusBadgeStyles[status] || 'bg-neutral-100 text-neutral-500 border border-neutral-200'
     }
 
     const canCheckIn = (booking: Booking) => {
@@ -119,7 +118,6 @@ const EmployeeDashboard: React.FC = () => {
         const now = new Date()
         const start = new Date(booking.start_time)
         const end = new Date(booking.end_time)
-        // Can check in 15 mins before start time and before end time
         const checkInWindow = new Date(start.getTime() - 15 * 60 * 1000)
         return now >= checkInWindow && now <= end
     }
@@ -128,16 +126,16 @@ const EmployeeDashboard: React.FC = () => {
         <div className="max-w-6xl">
             {/* Header */}
             <div className="mb-8">
-                <h1 className="text-4xl font-bold text-gray-900 mb-2" style={{ fontFamily: "'Playfair Display', serif" }}>
+                <h1 className="text-4xl font-bold text-neutral-900 mb-2" style={{ fontFamily: "'Playfair Display', serif" }}>
                     My Bookings
                 </h1>
-                <p className="text-gray-600">Manage your active bookings and check-in to resources</p>
+                <p className="text-neutral-500">Manage your active bookings and check-in to resources</p>
             </div>
 
             {/* Message Banner */}
             {message && (
                 <div className={`mb-6 p-4 rounded-lg border ${message.type === 'success'
-                    ? 'bg-green-50 border-green-200 text-green-800'
+                    ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
                     : 'bg-red-50 border-red-200 text-red-800'
                     }`}>
                     {message.text}
@@ -145,16 +143,16 @@ const EmployeeDashboard: React.FC = () => {
             )}
 
             {/* Quick Action */}
-            <Card className="mb-8 border-gray-900 bg-linear-to-r from-gray-900 to-gray-800 text-white">
+            <Card className="mb-8 border-neutral-800 bg-neutral-950 text-white">
                 <CardContent className="p-6">
                     <div className="flex items-center justify-between">
                         <div>
                             <h3 className="text-xl font-semibold mb-1">Need to book a resource?</h3>
-                            <p className="text-gray-300">Browse available resources and create a new booking</p>
+                            <p className="text-neutral-400">Browse available resources and create a new booking</p>
                         </div>
                         <Button
                             onClick={() => navigate('/dashboard/employee/book')}
-                            className="bg-white text-gray-900 hover:bg-gray-100"
+                            className="bg-white text-neutral-900 hover:bg-neutral-200 font-semibold"
                         >
                             <Calendar className="w-4 h-4 mr-2" />
                             Book Now
@@ -164,38 +162,38 @@ const EmployeeDashboard: React.FC = () => {
             </Card>
 
             {/* Active Bookings */}
-            <Card className="mb-8 border-gray-200 shadow-lg">
-                <CardHeader className="border-b border-gray-100 bg-gray-50">
-                    <CardTitle className="text-2xl text-gray-900">Active & Upcoming Bookings</CardTitle>
-                    <CardDescription>Your approved bookings that need check-in</CardDescription>
+            <Card className="mb-8 border-neutral-200 shadow-sm">
+                <CardHeader className="border-b border-neutral-100 bg-neutral-50/50">
+                    <CardTitle className="text-2xl text-neutral-900">Active & Upcoming Bookings</CardTitle>
+                    <CardDescription className="text-neutral-500">Your approved bookings that need check-in</CardDescription>
                 </CardHeader>
                 <CardContent className="p-6">
                     {loading ? (
-                        <div className="text-center py-12 text-gray-500">Loading bookings...</div>
+                        <div className="text-center py-12 text-neutral-400">Loading bookings...</div>
                     ) : activeBookings.length === 0 ? (
                         <div className="text-center py-12">
-                            <AlertCircle className="w-12 h-12 mx-auto text-gray-300 mb-3" />
-                            <p className="text-gray-500">No active bookings</p>
-                            <p className="text-sm text-gray-400 mt-1">Your approved bookings will appear here</p>
+                            <AlertCircle className="w-12 h-12 mx-auto text-neutral-300 mb-3" />
+                            <p className="text-neutral-500">No active bookings</p>
+                            <p className="text-sm text-neutral-400 mt-1">Your approved bookings will appear here</p>
                         </div>
                     ) : (
                         <div className="space-y-4">
                             {activeBookings.map((booking) => (
                                 <div
                                     key={booking.id}
-                                    className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow bg-white"
+                                    className="border border-neutral-200 rounded-lg p-4 hover:shadow-md transition-shadow bg-white"
                                 >
                                     <div className="flex items-start justify-between">
                                         <div className="flex-1">
                                             <div className="flex items-center gap-3 mb-3">
-                                                <h4 className="text-lg font-semibold text-gray-900">
+                                                <h4 className="text-lg font-semibold text-neutral-900">
                                                     {booking?.resource_name || 'Unknown Resource'}
                                                 </h4>
                                                 <Badge variant="secondary" className={getStatusBadge(booking.status)}>
                                                     {booking.status.replace('_', ' ').toUpperCase()}
                                                 </Badge>
                                                 {booking.checked_in_at && (
-                                                    <div className="flex items-center gap-1 text-green-600 text-sm">
+                                                    <div className="flex items-center gap-1 text-emerald-600 text-sm">
                                                         <CheckCircle className="w-4 h-4" />
                                                         <span>Checked In</span>
                                                     </div>
@@ -203,11 +201,11 @@ const EmployeeDashboard: React.FC = () => {
                                             </div>
 
                                             <div className="grid grid-cols-2 gap-4 text-sm">
-                                                <div className="flex items-center gap-2 text-gray-600">
+                                                <div className="flex items-center gap-2 text-neutral-500">
                                                     <Calendar className="w-4 h-4" />
                                                     <span>{new Date(booking.start_time).toLocaleDateString()}</span>
                                                 </div>
-                                                <div className="flex items-center gap-2 text-gray-600">
+                                                <div className="flex items-center gap-2 text-neutral-500">
                                                     <Clock className="w-4 h-4" />
                                                     <span>
                                                         {new Date(booking.start_time).toLocaleTimeString([], {
@@ -220,12 +218,12 @@ const EmployeeDashboard: React.FC = () => {
                                                     </span>
                                                 </div>
                                                 {booking.resource?.location && (
-                                                    <div className="flex items-center gap-2 text-gray-600">
+                                                    <div className="flex items-center gap-2 text-neutral-500">
                                                         <MapPin className="w-4 h-4" />
                                                         <span>{booking.resource.location}</span>
                                                     </div>
                                                 )}
-                                                <div className="flex items-center gap-2 text-gray-600 capitalize">
+                                                <div className="flex items-center gap-2 text-neutral-500 capitalize">
                                                     {booking.resource?.resource_type?.replace('_', ' ') || '-'}
                                                 </div>
                                             </div>
@@ -235,7 +233,7 @@ const EmployeeDashboard: React.FC = () => {
                                             {canCheckIn(booking) && (
                                                 <Button
                                                     onClick={() => onCheckIn(booking)}
-                                                    className="bg-green-600 hover:bg-green-700"
+                                                    className="bg-emerald-600 hover:bg-emerald-700 text-white"
                                                 >
                                                     <CheckCircle className="w-4 h-4 mr-2" />
                                                     Check In
@@ -244,7 +242,7 @@ const EmployeeDashboard: React.FC = () => {
                                             <Button
                                                 variant="outline"
                                                 onClick={() => onViewDetails(booking)}
-                                                className="border-gray-300"
+                                                className="border-neutral-300 text-neutral-700 hover:bg-neutral-50"
                                             >
                                                 <Eye className="w-4 h-4 mr-2" />
                                                 View Details
@@ -259,15 +257,15 @@ const EmployeeDashboard: React.FC = () => {
             </Card>
 
             {/* Recent Bookings */}
-            <Card className="border-gray-200 shadow-lg">
-                <CardHeader className="border-b border-gray-100 bg-gray-50">
-                    <CardTitle className="text-2xl text-gray-900">Recent Bookings</CardTitle>
-                    <CardDescription>Your latest booking activity</CardDescription>
+            <Card className="border-neutral-200 shadow-sm">
+                <CardHeader className="border-b border-neutral-100 bg-neutral-50/50">
+                    <CardTitle className="text-2xl text-neutral-900">Recent Bookings</CardTitle>
+                    <CardDescription className="text-neutral-500">Your latest booking activity</CardDescription>
                 </CardHeader>
                 <CardContent className="p-6">
                     {recentBookings.length === 0 ? (
                         <div className="text-center py-8">
-                            <p className="text-gray-500">No recent bookings</p>
+                            <p className="text-neutral-400">No recent bookings</p>
                         </div>
                     ) : (
                         <div className="space-y-3">
@@ -275,27 +273,27 @@ const EmployeeDashboard: React.FC = () => {
                                 <div
                                     key={booking.id}
                                     onClick={() => onViewDetails(booking)}
-                                    className="border border-gray-200 rounded-lg p-3 hover:bg-gray-50 cursor-pointer transition-colors"
+                                    className="border border-neutral-200 rounded-lg p-3 hover:bg-neutral-50 cursor-pointer transition-colors"
                                 >
                                     <div className="flex items-center justify-between">
                                         <div className="flex-1">
                                             <div className="flex items-center gap-2 mb-1">
-                                                <span className="font-medium text-gray-900">{booking.resource?.name || 'Unknown'}</span>
+                                                <span className="font-medium text-neutral-900">{booking.resource?.name || 'Unknown'}</span>
                                                 <Badge variant="secondary" className={`${getStatusBadge(booking.status)} text-xs`}>
                                                     {booking.status.replace('_', ' ').toUpperCase()}
                                                 </Badge>
                                             </div>
-                                            <div className="flex items-center gap-4 text-sm text-gray-600">
+                                            <div className="flex items-center gap-4 text-sm text-neutral-500">
                                                 <span>{new Date(booking.start_time).toLocaleString()}</span>
                                                 {booking.checked_in_at && (
-                                                    <div className="flex items-center gap-1 text-green-600">
+                                                    <div className="flex items-center gap-1 text-emerald-600">
                                                         <CheckCircle className="w-3 h-3" />
                                                         <span className="text-xs">Checked In</span>
                                                     </div>
                                                 )}
                                             </div>
                                         </div>
-                                        <Eye className="w-4 h-4 text-gray-400" />
+                                        <Eye className="w-4 h-4 text-neutral-300" />
                                     </div>
                                 </div>
                             ))}
@@ -307,7 +305,7 @@ const EmployeeDashboard: React.FC = () => {
                             <Button
                                 variant="outline"
                                 onClick={() => navigate('/dashboard/employee/history')}
-                                className="border-gray-300"
+                                className="border-neutral-300 text-neutral-600 hover:bg-neutral-50"
                             >
                                 View All History
                             </Button>
@@ -318,57 +316,57 @@ const EmployeeDashboard: React.FC = () => {
 
             {/* View Details Dialog */}
             <Dialog open={openView} onOpenChange={setOpenView}>
-                <DialogContent className="bg-white max-w-2xl">
+                <DialogContent className="bg-white max-w-2xl border border-neutral-200">
                     <DialogHeader>
-                        <DialogTitle className="text-2xl font-semibold">Booking Details</DialogTitle>
-                        <DialogDescription>Complete information about your booking</DialogDescription>
+                        <DialogTitle className="text-2xl font-semibold text-neutral-900">Booking Details</DialogTitle>
+                        <DialogDescription className="text-neutral-500">Complete information about your booking</DialogDescription>
                     </DialogHeader>
 
                     {selectedBooking && (
                         <div className="space-y-4 mt-4">
-                            <div className="bg-gray-50 p-4 rounded-lg space-y-4">
+                            <div className="bg-neutral-50 p-4 rounded-lg space-y-4 border border-neutral-100">
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <div className="text-xs font-semibold text-gray-500 uppercase mb-1">Resource</div>
-                                        <div className="font-medium text-gray-900">{selectedBooking.resource?.name}</div>
-                                        <div className="text-sm text-gray-600 capitalize">
+                                        <div className="text-xs font-semibold text-neutral-400 uppercase mb-1">Resource</div>
+                                        <div className="font-medium text-neutral-900">{selectedBooking.resource?.name}</div>
+                                        <div className="text-sm text-neutral-500 capitalize">
                                             {selectedBooking.resource?.resource_type?.replace('_', ' ')}
                                         </div>
                                     </div>
 
                                     <div>
-                                        <div className="text-xs font-semibold text-gray-500 uppercase mb-1">Status</div>
+                                        <div className="text-xs font-semibold text-neutral-400 uppercase mb-1">Status</div>
                                         <Badge variant="secondary" className={getStatusBadge(selectedBooking.status)}>
                                             {selectedBooking.status.replace('_', ' ').toUpperCase()}
                                         </Badge>
                                     </div>
 
                                     <div>
-                                        <div className="text-xs font-semibold text-gray-500 uppercase mb-1">Start Time</div>
-                                        <div className="text-sm text-gray-900">{new Date(selectedBooking.start_time).toLocaleString()}</div>
+                                        <div className="text-xs font-semibold text-neutral-400 uppercase mb-1">Start Time</div>
+                                        <div className="text-sm text-neutral-900">{new Date(selectedBooking.start_time).toLocaleString()}</div>
                                     </div>
 
                                     <div>
-                                        <div className="text-xs font-semibold text-gray-500 uppercase mb-1">End Time</div>
-                                        <div className="text-sm text-gray-900">{new Date(selectedBooking.end_time).toLocaleString()}</div>
+                                        <div className="text-xs font-semibold text-neutral-400 uppercase mb-1">End Time</div>
+                                        <div className="text-sm text-neutral-900">{new Date(selectedBooking.end_time).toLocaleString()}</div>
                                     </div>
 
                                     {selectedBooking.resource?.location && (
                                         <div>
-                                            <div className="text-xs font-semibold text-gray-500 uppercase mb-1">Location</div>
-                                            <div className="text-sm text-gray-900">{selectedBooking.resource.location}</div>
+                                            <div className="text-xs font-semibold text-neutral-400 uppercase mb-1">Location</div>
+                                            <div className="text-sm text-neutral-900">{selectedBooking.resource.location}</div>
                                         </div>
                                     )}
 
                                     <div>
-                                        <div className="text-xs font-semibold text-gray-500 uppercase mb-1">Checked In</div>
+                                        <div className="text-xs font-semibold text-neutral-400 uppercase mb-1">Checked In</div>
                                         {selectedBooking.checked_in_at ? (
-                                            <div className="flex items-center gap-2 text-green-600">
+                                            <div className="flex items-center gap-2 text-emerald-600">
                                                 <CheckCircle className="w-4 h-4" />
                                                 <span className="text-sm">{new Date(selectedBooking.checked_in_at).toLocaleString()}</span>
                                             </div>
                                         ) : (
-                                            <div className="flex items-center gap-2 text-gray-500">
+                                            <div className="flex items-center gap-2 text-neutral-400">
                                                 <XCircle className="w-4 h-4" />
                                                 <span className="text-sm">Not checked in</span>
                                             </div>
@@ -377,9 +375,9 @@ const EmployeeDashboard: React.FC = () => {
                                 </div>
 
                                 {selectedBooking.admin_note && (
-                                    <div className="pt-4 border-t border-gray-200">
-                                        <div className="text-xs font-semibold text-gray-500 uppercase mb-2">Admin Note</div>
-                                        <div className="bg-white p-3 rounded border border-gray-200 text-sm text-gray-900">
+                                    <div className="pt-4 border-t border-neutral-200">
+                                        <div className="text-xs font-semibold text-neutral-400 uppercase mb-2">Admin Note</div>
+                                        <div className="bg-white p-3 rounded border border-neutral-200 text-sm text-neutral-900">
                                             {selectedBooking.admin_note}
                                         </div>
                                     </div>
@@ -392,7 +390,7 @@ const EmployeeDashboard: React.FC = () => {
                                         onCheckIn(selectedBooking)
                                         setOpenView(false)
                                     }}
-                                    className="w-full bg-green-600 hover:bg-green-700"
+                                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
                                 >
                                     <CheckCircle className="w-4 h-4 mr-2" />
                                     Check In Now

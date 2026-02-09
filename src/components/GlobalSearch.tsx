@@ -9,12 +9,12 @@ import {
   CommandItem,
   CommandList,
 } from '@/components/ui/command'
-import { 
-  Search, 
-  DoorOpen, 
-  Calendar, 
-  Users, 
-  FileText 
+import {
+  Search,
+  DoorOpen,
+  Calendar,
+  Users,
+  FileText
 } from 'lucide-react'
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts'
 import dayjs from 'dayjs'
@@ -35,30 +35,13 @@ export function GlobalSearch() {
   const navigate = useNavigate()
 
   useKeyboardShortcuts([
-    {
-      key: 'k',
-      ctrlKey: true,
-      callback: () => setOpen(true),
-      description: 'Open global search'
-    },
-    {
-      key: 'k',
-      metaKey: true,
-      callback: () => setOpen(true),
-      description: 'Open global search (Mac)'
-    }
+    { key: 'k', ctrlKey: true, callback: () => setOpen(true), description: 'Open global search' },
+    { key: 'k', metaKey: true, callback: () => setOpen(true), description: 'Open global search (Mac)' }
   ])
 
   useEffect(() => {
-    if (query.length < 2) {
-      setResults([])
-      return
-    }
-
-    const debounce = setTimeout(() => {
-      performSearch(query)
-    }, 300)
-
+    if (query.length < 2) { setResults([]); return }
+    const debounce = setTimeout(() => { performSearch(query) }, 300)
     return () => clearTimeout(debounce)
   }, [query])
 
@@ -70,70 +53,27 @@ export function GlobalSearch() {
         api.get<{ bookings: any[] }>('/bookings').catch(() => ({ bookings: [] })),
         api.get<{ users: any[] }>('/users').catch(() => ({ users: [] }))
       ])
-
       const searchResults: SearchResult[] = []
       const lowerQuery = searchQuery.toLowerCase()
 
-      // Search resources
       resourcesRes.resources
-        .filter(r => 
-          r.name.toLowerCase().includes(lowerQuery) ||
-          r.location.toLowerCase().includes(lowerQuery)
-        )
-        .forEach(r => {
-          searchResults.push({
-            type: 'resource',
-            id: r.id,
-            title: r.name,
-            subtitle: r.location,
-            url: `/resources/${r.id}`
-          })
-        })
+        .filter(r => r.name.toLowerCase().includes(lowerQuery) || r.location.toLowerCase().includes(lowerQuery))
+        .forEach(r => { searchResults.push({ type: 'resource', id: r.id, title: r.name, subtitle: r.location, url: `/resources/${r.id}` }) })
 
-      // Search bookings
       bookingsRes.bookings
-        .filter(b => 
-          b.resource?.name.toLowerCase().includes(lowerQuery) ||
-          b.user?.name.toLowerCase().includes(lowerQuery)
-        )
-        .forEach(b => {
-          searchResults.push({
-            type: 'booking',
-            id: b.id,
-            title: `${b.resource?.name} - ${b.user?.name}`,
-            subtitle: dayjs(b.start_time).format('MMM D, YYYY h:mm A'),
-            url: `/bookings/${b.id}`
-          })
-        })
+        .filter(b => b.resource?.name.toLowerCase().includes(lowerQuery) || b.user?.name.toLowerCase().includes(lowerQuery))
+        .forEach(b => { searchResults.push({ type: 'booking', id: b.id, title: `${b.resource?.name} - ${b.user?.name}`, subtitle: dayjs(b.start_time).format('MMM D, YYYY h:mm A'), url: `/bookings/${b.id}` }) })
 
-      // Search users
       usersRes.users
-        .filter(u => 
-          u.name.toLowerCase().includes(lowerQuery) ||
-          u.email.toLowerCase().includes(lowerQuery)
-        )
-        .forEach(u => {
-          searchResults.push({
-            type: 'user',
-            id: u.id,
-            title: u.name,
-            subtitle: u.email,
-            url: `/users/${u.id}`
-          })
-        })
+        .filter(u => u.name.toLowerCase().includes(lowerQuery) || u.email.toLowerCase().includes(lowerQuery))
+        .forEach(u => { searchResults.push({ type: 'user', id: u.id, title: u.name, subtitle: u.email, url: `/users/${u.id}` }) })
 
       setResults(searchResults.slice(0, 20))
-    } catch (err) {
-      console.error('Search failed:', err)
-    } finally {
-      setLoading(false)
-    }
+    } catch (err) { console.error('Search failed:', err) }
+    finally { setLoading(false) }
   }
 
-  function handleSelect(result: SearchResult) {
-    setOpen(false)
-    navigate(result.url)
-  }
+  function handleSelect(result: SearchResult) { setOpen(false); navigate(result.url) }
 
   const getIcon = (type: string) => {
     switch (type) {
@@ -148,42 +88,36 @@ export function GlobalSearch() {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors text-sm text-gray-600"
+        className="flex items-center gap-2 px-4 py-2 bg-neutral-800 hover:bg-neutral-700 rounded-lg transition-colors text-sm text-neutral-300"
       >
         <Search className="w-4 h-4" />
         <span>Search...</span>
-        <kbd className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 bg-white border border-gray-300 rounded text-xs">
+        <kbd className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 bg-neutral-700 border border-neutral-600 rounded text-xs text-neutral-400">
           <span className="text-xs">⌘</span>K
         </kbd>
       </button>
 
       <CommandDialog open={open} onOpenChange={setOpen}>
-        <CommandInput 
-          placeholder="Search resources, bookings, users..." 
+        <CommandInput
+          placeholder="Search resources, bookings, users..."
           value={query}
           onValueChange={setQuery}
         />
         <CommandList>
           {loading ? (
-            <div className="p-4 text-center text-sm text-gray-500">
-              Searching...
-            </div>
+            <div className="p-4 text-center text-sm text-neutral-500">Searching...</div>
           ) : (
             <>
               <CommandEmpty>No results found.</CommandEmpty>
-              
+
               {results.filter(r => r.type === 'resource').length > 0 && (
                 <CommandGroup heading="Resources">
                   {results.filter(r => r.type === 'resource').map((result) => (
-                    <CommandItem
-                      key={`${result.type}-${result.id}`}
-                      onSelect={() => handleSelect(result)}
-                      className="cursor-pointer"
-                    >
+                    <CommandItem key={`${result.type}-${result.id}`} onSelect={() => handleSelect(result)} className="cursor-pointer">
                       {getIcon(result.type)}
                       <div className="ml-2">
-                        <p className="font-medium">{result.title}</p>
-                        <p className="text-xs text-gray-500">{result.subtitle}</p>
+                        <p className="font-medium text-neutral-900">{result.title}</p>
+                        <p className="text-xs text-neutral-500">{result.subtitle}</p>
                       </div>
                     </CommandItem>
                   ))}
@@ -193,15 +127,11 @@ export function GlobalSearch() {
               {results.filter(r => r.type === 'booking').length > 0 && (
                 <CommandGroup heading="Bookings">
                   {results.filter(r => r.type === 'booking').map((result) => (
-                    <CommandItem
-                      key={`${result.type}-${result.id}`}
-                      onSelect={() => handleSelect(result)}
-                      className="cursor-pointer"
-                    >
+                    <CommandItem key={`${result.type}-${result.id}`} onSelect={() => handleSelect(result)} className="cursor-pointer">
                       {getIcon(result.type)}
                       <div className="ml-2">
-                        <p className="font-medium">{result.title}</p>
-                        <p className="text-xs text-gray-500">{result.subtitle}</p>
+                        <p className="font-medium text-neutral-900">{result.title}</p>
+                        <p className="text-xs text-neutral-500">{result.subtitle}</p>
                       </div>
                     </CommandItem>
                   ))}
@@ -211,15 +141,11 @@ export function GlobalSearch() {
               {results.filter(r => r.type === 'user').length > 0 && (
                 <CommandGroup heading="Users">
                   {results.filter(r => r.type === 'user').map((result) => (
-                    <CommandItem
-                      key={`${result.type}-${result.id}`}
-                      onSelect={() => handleSelect(result)}
-                      className="cursor-pointer"
-                    >
+                    <CommandItem key={`${result.type}-${result.id}`} onSelect={() => handleSelect(result)} className="cursor-pointer">
                       {getIcon(result.type)}
                       <div className="ml-2">
-                        <p className="font-medium">{result.title}</p>
-                        <p className="text-xs text-gray-500">{result.subtitle}</p>
+                        <p className="font-medium text-neutral-900">{result.title}</p>
+                        <p className="text-xs text-neutral-500">{result.subtitle}</p>
                       </div>
                     </CommandItem>
                   ))}

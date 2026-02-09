@@ -3,6 +3,10 @@ import Header from '../components/Header'
 import { api } from '../lib/api'
 import { useAuth } from '../store/authStore'
 import { User } from '../types/auth'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { User as UserIcon, Mail, Shield, Hash, Calendar } from 'lucide-react'
+import { Skeleton } from '@/components/ui/skeleton'
 
 const Profile: React.FC = () => {
   const storeUser = useAuth(state => state.user)
@@ -12,64 +16,91 @@ const Profile: React.FC = () => {
   const [user, setLocalUser] = useState<User | null>(storeUser ?? null)
 
   useEffect(() => {
-    // If we already have user in store, show it immediately
-    if (storeUser) {
-      setLocalUser(storeUser)
-      return
-    }
-
+    if (storeUser) { setLocalUser(storeUser); return }
     let mounted = true
     async function load() {
-      setLoading(true)
-      setError(null)
+      setLoading(true); setError(null)
       try {
         const res = await api.get<User>('/auth/me')
         if (!mounted) return
-        setLocalUser(res)
-        setUser(res)
-      } catch (err: any) {
-        setError(err.message || String(err))
-      } finally {
-        setLoading(false)
-      }
+        setLocalUser(res); setUser(res)
+      } catch (err: any) { setError(err.message || String(err)) }
+      finally { setLoading(false) }
     }
     load()
-    return () => {
-      mounted = false
-    }
+    return () => { mounted = false }
   }, [storeUser, setUser])
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col bg-neutral-50">
       <Header />
-      <main className="flex-1 p-6">
-        <h1 className="text-2xl font-bold">Profile</h1>
+      <main className="flex-1 p-8">
+        <div className="max-w-lg mx-auto">
+          <h1
+            className="text-3xl font-bold text-neutral-900 mb-8"
+            style={{ fontFamily: "'Playfair Display', serif" }}
+          >
+            My Profile
+          </h1>
 
-        {loading && <p className="mt-4">Loading...</p>}
-        {error && <p className="mt-4 text-red-600">Error: {error}</p>}
+          {loading && (
+            <Card className="rounded-2xl border-neutral-200">
+              <CardContent className="p-6 space-y-4">
+                {[1,2,3,4].map(i => <Skeleton key={i} className="h-6 w-full" />)}
+              </CardContent>
+            </Card>
+          )}
 
-        {user && (
-          <div className="mt-6 bg-white p-4 rounded shadow max-w-md">
-            <dl>
-              <div className="mb-3">
-                <dt className="text-sm text-gray-500">Employee ID</dt>
-                <dd className="font-medium">{user.employee_id}</dd>
-              </div>
-              <div className="mb-3">
-                <dt className="text-sm text-gray-500">Name</dt>
-                <dd className="font-medium">{user.name}</dd>
-              </div>
-              <div className="mb-3">
-                <dt className="text-sm text-gray-500">Email</dt>
-                <dd className="font-medium">{user.email}</dd>
-              </div>
-              <div>
-                <dt className="text-sm text-gray-500">Role</dt>
-                <dd className="font-medium">{user.role}</dd>
-              </div>
-            </dl>
-          </div>
-        )}
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm">
+              Error: {error}
+            </div>
+          )}
+
+          {user && (
+            <Card className="rounded-2xl border-neutral-200 shadow-sm overflow-hidden">
+              <CardHeader className="bg-neutral-900 text-white p-6">
+                <div className="flex items-center gap-4">
+                  <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center text-neutral-900 font-bold text-2xl">
+                    {user.name.charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <CardTitle className="text-xl text-white">{user.name}</CardTitle>
+                    <p className="text-neutral-300 text-sm mt-1">{user.email}</p>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="p-6 space-y-5">
+                <div className="flex items-center justify-between py-3 border-b border-neutral-100">
+                  <div className="flex items-center gap-2 text-neutral-500 text-sm">
+                    <Hash className="w-4 h-4" /> Employee ID
+                  </div>
+                  <span className="font-mono font-semibold text-neutral-900">{user.employee_id}</span>
+                </div>
+                <div className="flex items-center justify-between py-3 border-b border-neutral-100">
+                  <div className="flex items-center gap-2 text-neutral-500 text-sm">
+                    <UserIcon className="w-4 h-4" /> Name
+                  </div>
+                  <span className="font-semibold text-neutral-900">{user.name}</span>
+                </div>
+                <div className="flex items-center justify-between py-3 border-b border-neutral-100">
+                  <div className="flex items-center gap-2 text-neutral-500 text-sm">
+                    <Mail className="w-4 h-4" /> Email
+                  </div>
+                  <span className="font-medium text-neutral-900">{user.email}</span>
+                </div>
+                <div className="flex items-center justify-between py-3">
+                  <div className="flex items-center gap-2 text-neutral-500 text-sm">
+                    <Shield className="w-4 h-4" /> Role
+                  </div>
+                  <Badge className="bg-neutral-900 text-white rounded-full px-3 capitalize">
+                    {user.role}
+                  </Badge>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
       </main>
     </div>
   )
