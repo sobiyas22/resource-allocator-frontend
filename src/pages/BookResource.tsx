@@ -222,7 +222,7 @@ const BookResource: React.FC = () => {
       })
 
       toast.success('Booking request submitted! Waiting for admin approval.')
-      navigate('/dashboard/employee/bookings')
+      navigate('/dashboard/employee')
     } catch (err: any) {
       const errorMsg = err.message || 'Failed to create booking'
 

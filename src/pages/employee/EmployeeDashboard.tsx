@@ -14,8 +14,12 @@ import {
 } from '@/components/ui/dialog'
 import dayjs from 'dayjs'
 import utc from 'dayjs/plugin/utc'
+import timezone from 'dayjs/plugin/timezone'
 
 dayjs.extend(utc)
+dayjs.extend(timezone)
+
+const IST = 'Asia/Kolkata'
 
 interface Booking {
     id: number
@@ -43,12 +47,12 @@ interface Booking {
 }
 
 const statusBadgeStyles: Record<string, string> = {
-    pending:    'bg-amber-50 text-amber-700 border border-amber-200',
-    approved:   'bg-blue-50 text-blue-700 border border-blue-200',
-    rejected:   'bg-red-50 text-red-700 border border-red-200',
+    pending: 'bg-amber-50 text-amber-700 border border-amber-200',
+    approved: 'bg-blue-50 text-blue-700 border border-blue-200',
+    rejected: 'bg-red-50 text-red-700 border border-red-200',
     checked_in: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
-    completed:  'bg-violet-50 text-violet-700 border border-violet-200',
-    cancelled:  'bg-neutral-100 text-neutral-500 border border-neutral-200',
+    completed: 'bg-violet-50 text-violet-700 border border-violet-200',
+    cancelled: 'bg-neutral-100 text-neutral-500 border border-neutral-200',
 }
 
 const EmployeeDashboard: React.FC = () => {
@@ -91,7 +95,7 @@ const EmployeeDashboard: React.FC = () => {
     }, [])
 
     async function onCheckIn(booking: Booking) {
-        if (!confirm(`Check in for ${booking.resource?.name}?`)) return
+        // if (!confirm(`Check in for ${booking.resource_name}?`)) return
 
         setMessage(null)
         try {
@@ -119,12 +123,18 @@ const EmployeeDashboard: React.FC = () => {
 
     const canCheckIn = (booking: Booking) => {
         if (booking.status !== 'approved' || booking.checked_in_at) return false
-        const now = dayjs.utc()
-        const start = dayjs.utc(booking.start_time)
-        const end = dayjs.utc(booking.end_time)
-        const checkInWindow = start.subtract(15, 'minute')
-        return now.isAfter(checkInWindow) && now.isBefore(end)
+
+        const IST = 'Asia/Kolkata'
+
+        const now = dayjs().tz(IST)
+        const start = dayjs.tz(booking.start_time, IST)
+
+        const checkInWindowStart = start.subtract(10, 'minute')
+        const checkInWindowEnd = start.add(15, 'minute')
+
+        return now.isAfter(checkInWindowStart) && now.isBefore(checkInWindowEnd)
     }
+
 
     // Format date in UTC
     const formatDate = (dateString: string) => {
@@ -236,9 +246,9 @@ const EmployeeDashboard: React.FC = () => {
                                                         <span>{booking.resource.location}</span>
                                                     </div>
                                                 )}
-                                                <div className="flex items-center gap-2 text-neutral-500 capitalize">
+                                                {/* <div className="flex items-center gap-2 text-neutral-500 capitalize">
                                                     {booking.resource?.resource_type?.replace('_', ' ') || '-'}
-                                                </div>
+                                                </div> */}
                                             </div>
                                         </div>
 
