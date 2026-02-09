@@ -75,12 +75,16 @@ interface AlternativeResource {
   id: number
   name: string
   resource_type: string
+  description?: string
   location: string
+  is_active: boolean
+  properties: Record<string, any>
 }
 
 interface AlternativeSlot {
-  start: string
-  end: string
+  start_time: string
+  end_time: string
+  available: boolean
 }
 
 type ResourceType = 'meeting_room' | 'phone' | 'laptop' | 'turf'
@@ -248,17 +252,22 @@ const BookResource: React.FC = () => {
   async function checkBlockedSlot(slot: TimeSlot) {
     if (!selectedResource) return
 
+    // Show loading state
     toast.info('Checking for alternatives...')
+
     try {
+      // Make a test booking request to trigger the error response with suggestions
       await api.post('/bookings', {
         resource_id: selectedResource.id,
         start_time: slot.start_time,
         end_time: slot.end_time
       })
-      // If successful (which shouldn't happen for a blocked slot in theory, but if it does), select it
+
+      // If we reach here, the slot was actually available (unexpected)
       toast.success('Slot appears available! Selected.')
       setSelectedSlot(slot)
     } catch (err: any) {
+      // Expected error for blocked slots
       if (err.response?.data?.suggestions) {
         const { available_resources, available_slots } = err.response.data.suggestions
         setAlternatives({
@@ -266,8 +275,9 @@ const BookResource: React.FC = () => {
           slots: available_slots || []
         })
         setShowAlternatives(true)
+        toast.info('Showing alternative options')
       } else {
-        toast.error('This slot is fully blocked with no immediate alternatives.')
+        toast.error('This slot is blocked with no alternatives available.')
       }
     }
   }
@@ -281,16 +291,15 @@ const BookResource: React.FC = () => {
     return false
   }
 
-  const now = dayjs.utc()
-  const isToday = dayjs(selectedDate).isSame(now, 'day')
+  const now = dayjs()
 
   const sortedSlots = slots.sort((a, b) =>
     dayjs(a.start_time).valueOf() - dayjs(b.start_time).valueOf()
   )
 
   const getSlotStatus = (slot: TimeSlot): 'past' | 'blocked' | 'available' => {
-    const slotStart = dayjs.utc(slot.start_time)
-    if (dayjs(selectedDate).isSame(now, 'day') && slotStart.isBefore(now)) {
+    const slotEnd = dayjs(slot.end_time)
+    if (dayjs(selectedDate).isSame(now, 'day') && slotEnd.isBefore(now)) {
       return 'past'
     }
     return slot.available ? 'available' : 'blocked'
@@ -299,12 +308,10 @@ const BookResource: React.FC = () => {
   const availableCount = slots.filter(s => getSlotStatus(s) === 'available').length
   const blockedCount = slots.filter(s => getSlotStatus(s) === 'blocked').length
 
-  // Format time in UTC - readable format
   const formatTime = (timeString: string) => {
-    return dayjs.utc(timeString).format('h:mm A')
+    return dayjs(timeString).format('h:mm A')
   }
 
-  // Compact Slot card component
   const SlotCard = ({
     slot,
     isSelected = false,
@@ -317,28 +324,33 @@ const BookResource: React.FC = () => {
     const status = getSlotStatus(slot)
     const baseStyles = "relative p-3 rounded-xl border transition-all duration-200 group flex flex-col items-center gap-1.5"
 
-    // Style logic
     let typeStyles = ""
     if (isSelected) {
       typeStyles = "bg-gradient-to-br from-emerald-500 to-emerald-600 border-emerald-500 shadow-lg shadow-emerald-200 cursor-pointer"
     } else if (status === 'past') {
-      typeStyles = "bg-neutral-100 border-neutral-200 opacity-50 cursor-not-allowed"
+      typeStyles = "bg-neutral-100 border-neutral-200 opacity-60 cursor-not-allowed grayscale pointer-events-none"
     } else if (status === 'blocked') {
       typeStyles = "bg-red-50 border-red-200 hover:border-red-300 hover:shadow-sm cursor-pointer"
     } else {
-      // Available
       typeStyles = "bg-white border-neutral-200 hover:border-emerald-400 hover:shadow-md hover:bg-emerald-50/30 cursor-pointer"
     }
 
     return (
       <div
-        onClick={() => status !== 'past' && onClick?.(slot)}
+        onClick={() => {
+          if (status === 'past') return
+          onClick?.(slot)
+        }}
         className={`${baseStyles} ${typeStyles}`}
       >
-        {/* Time display */}
         <div className="text-center w-full">
-          <div className={`font-semibold text-xs ${isSelected ? 'text-white' :
-            status === 'blocked' ? 'text-red-700' : 'text-neutral-800'
+          <div className={`font-semibold text-xs ${isSelected
+            ? 'text-white'
+            : status === 'past'
+              ? 'text-neutral-400'
+              : status === 'blocked'
+                ? 'text-red-700'
+                : 'text-neutral-800'
             }`}>
             {formatTime(slot.start_time)}
           </div>
@@ -347,14 +359,18 @@ const BookResource: React.FC = () => {
             }`}>
             <ArrowRight className="w-3 h-3" />
           </div>
-          <div className={`font-medium text-xs ${isSelected ? 'text-white/90' :
-            status === 'blocked' ? 'text-red-600' : 'text-neutral-600'
+          <div className={`font-medium text-xs ${isSelected
+            ? 'text-white/90'
+            : status === 'past'
+              ? 'text-neutral-400'
+              : status === 'blocked'
+                ? 'text-red-600'
+                : 'text-neutral-600'
             }`}>
             {formatTime(slot.end_time)}
           </div>
         </div>
 
-        {/* Status indicator */}
         {status === 'blocked' && (
           <Badge variant="secondary" className="text-[10px] bg-red-100 text-red-700 border-0 px-1.5 py-0 w-full justify-center">
             Blocked
@@ -366,7 +382,7 @@ const BookResource: React.FC = () => {
           </Badge>
         )}
         {status === 'available' && !isSelected && (
-          <div className="h-5"></div> // Spacer to keep height consistent
+          <div className="h-5"></div>
         )}
         {isSelected && (
           <div className="flex items-center justify-center gap-0.5 text-white text-[10px] font-medium w-full">
@@ -532,40 +548,67 @@ const BookResource: React.FC = () => {
                   Select Date & Duration
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-5 space-y-5">
-                <div className="space-y-3">
+              <CardContent
+                className="p-5 space-y-5"
+              >
+                <div
+                  className="space-y-3"
+                >
                   <label className="text-sm font-medium text-neutral-700">Date</label>
-                  {/* Calendar Container */}
-                  <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-hidden">
+                  <div
+                    className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-hidden"
+                  >
                     <Calendar
                       mode="single"
                       selected={selectedDate}
-                      onSelect={(date: any) => date && setSelectedDate(date)}
+                      onSelect={(date: Date | undefined) => date && setSelectedDate(date)}
                       disabled={isDateDisabled}
-                      className="w-full! p-0"
+                      className="w-full p-2"
                       classNames={{
                         months: "flex flex-col w-full",
                         month: "space-y-4 w-full",
-                        caption: "flex justify-center pt-4 pb-2 relative items-center",
+                        caption: "flex justify-center items-center py-3 relative",
                         caption_label: "text-base font-semibold text-neutral-900",
-                        nav: "space-x-1 flex items-center",
-                        nav_button: "h-9 w-9 bg-transparent p-0 opacity-70 hover:opacity-100 hover:bg-neutral-100 rounded-lg transition-colors inline-flex items-center justify-center",
-                        nav_button_previous: "absolute left-2",
-                        nav_button_next: "absolute right-2",
-                        table: "w-full border-collapse",
-                        head_row: "flex w-full",
-                        head_cell: "text-neutral-500 rounded-md flex-1 font-medium text-sm py-3 text-center",
-                        row: "flex w-full mt-1",
-                        cell: "relative p-0.5 text-center text-sm focus-within:relative focus-within:z-20 flex-1",
-                        day: "h-11 w-full p-0 font-normal rounded-lg hover:bg-neutral-100 transition-colors inline-flex items-center justify-center",
-                        day_range_end: "day-range-end",
-                        day_selected: "bg-neutral-900 text-white hover:bg-neutral-800 hover:text-white focus:bg-neutral-900 focus:text-white rounded-lg font-semibold",
-                        day_today: "bg-emerald-50 text-emerald-700 font-semibold border-2 border-emerald-300",
-                        day_outside: "text-neutral-300 opacity-50",
-                        day_disabled: "text-neutral-300 opacity-40 cursor-not-allowed hover:bg-transparent",
+                        nav: "flex items-center gap-2",
+                        nav_button:
+                          "h-11 w-11 rounded-xl border border-neutral-200 bg-white hover:bg-neutral-100 transition flex items-center justify-center",
+                        nav_button_previous: "absolute left-3",
+                        nav_button_next: "absolute right-3",
+
+                        table: "w-full border-separate border-spacing-2",
+                        head_row: "grid grid-cols-7 mb-2",
+                        head_cell:
+                          "text-neutral-500 text-xs font-medium text-center uppercase tracking-wide",
+
+                        row: "grid grid-cols-7 gap-2",
+                        cell: "w-full aspect-square",
+
+                        day: `
+      w-full h-full rounded-xl 
+      border border-neutral-200 
+      bg-white 
+      hover:bg-emerald-50 hover:border-emerald-400 
+      transition 
+      flex items-center justify-center 
+      text-sm font-medium
+    `,
+
+                        day_selected:
+                          "bg-emerald-600 text-white border-emerald-600 hover:bg-emerald-600",
+
+                        day_today:
+                          "border-2 border-emerald-500 text-emerald-700 font-bold bg-emerald-50",
+
+                        day_outside:
+                          "text-neutral-300 bg-neutral-50 opacity-50",
+
+                        day_disabled:
+                          "text-neutral-300 bg-neutral-100 cursor-not-allowed opacity-40",
+
                         day_hidden: "invisible",
                       }}
                     />
+
                   </div>
                 </div>
 
@@ -603,7 +646,7 @@ const BookResource: React.FC = () => {
                     <div>
                       <p className="text-sm font-medium text-blue-900">Booking Hours</p>
                       <p className="text-xs text-blue-700 mt-1">
-                        Mon-Fri, 9 AM - 6 PM . Weekends and holidays are blocked.
+                        Mon-Fri, 9 AM - 6 PM. Weekends and holidays are blocked.
                       </p>
                     </div>
                   </div>
@@ -638,32 +681,6 @@ const BookResource: React.FC = () => {
               </CardContent>
             </Card>
 
-            {/* Legend Card */}
-            <Card className="shadow-sm border-neutral-200 bg-white">
-              <CardHeader className="bg-neutral-50 border-b border-neutral-100 py-3">
-                <CardTitle className="text-sm text-neutral-700">Slot Legend</CardTitle>
-              </CardHeader>
-              <CardContent className="p-4">
-                <div className="space-y-2.5">
-                  <div className="flex items-center gap-3">
-                    <div className="w-3 h-3 rounded-full bg-neutral-400" />
-                    <span className="text-sm text-neutral-600">Available</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="w-3 h-3 rounded-full bg-emerald-500" />
-                    <span className="text-sm text-neutral-600">Selected</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="w-3 h-3 rounded-full bg-red-500" />
-                    <span className="text-sm text-neutral-600">Blocked</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="w-3 h-3 rounded-full bg-neutral-300" />
-                    <span className="text-sm text-neutral-600">Past</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
           </div>
 
           <div className="lg:col-span-2">
@@ -707,7 +724,6 @@ const BookResource: React.FC = () => {
                   </div>
                 ) : (
                   <>
-                    {/* All Slots Grid */}
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 mb-6">
                       {sortedSlots.map((slot, index) => (
                         <SlotCard
@@ -717,8 +733,10 @@ const BookResource: React.FC = () => {
                           onClick={(s) => {
                             const status = getSlotStatus(s)
                             if (status === 'blocked') {
+                              // When clicking a blocked slot, check for alternatives
                               checkBlockedSlot(s)
                             } else if (status === 'available') {
+                              // When clicking an available slot, select it
                               setSelectedSlot(s)
                             }
                           }}
@@ -726,7 +744,6 @@ const BookResource: React.FC = () => {
                       ))}
                     </div>
 
-                    {/* Booking Summary */}
                     {selectedSlot && (
                       <div className="bg-linear-to-br from-emerald-50 to-green-50 border-2 border-emerald-200 rounded-2xl p-5 mt-6">
                         <h4 className="font-semibold text-emerald-800 mb-4 flex items-center gap-2">
@@ -796,7 +813,7 @@ const BookResource: React.FC = () => {
 
       {/* Alternatives Dialog */}
       <Dialog open={showAlternatives} onOpenChange={setShowAlternatives}>
-        <DialogContent className="max-w-2xl bg-white border border-neutral-200">
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto bg-white border border-neutral-200">
           <DialogHeader>
             <DialogTitle className="text-xl text-amber-700 flex items-center gap-2">
               <AlertCircle className="w-6 h-6" />
@@ -815,12 +832,27 @@ const BookResource: React.FC = () => {
                 </h4>
                 <div className="space-y-2">
                   {alternatives.resources.map((res) => (
-                    <div key={res.id} className="bg-neutral-50 border border-neutral-200 rounded-xl p-4 hover:border-neutral-300 transition-colors cursor-pointer">
-                      <p className="font-medium text-neutral-900">{res.name}</p>
-                      <p className="text-sm text-neutral-500 flex items-center gap-1 mt-1">
-                        <MapPin className="w-3 h-3" />
-                        {res.location}
-                      </p>
+                    <div
+                      key={res.id}
+                      className="bg-neutral-50 border border-neutral-200 rounded-xl p-4 hover:border-emerald-300 hover:bg-emerald-50/30 transition-colors cursor-pointer"
+                      onClick={() => {
+                        handleResourceSelect(res)
+                        setShowAlternatives(false)
+                      }}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium text-neutral-900">{res.name}</p>
+                          <p className="text-sm text-neutral-500 flex items-center gap-1 mt-1">
+                            <MapPin className="w-3 h-3" />
+                            {res.location}
+                          </p>
+                          {res.properties?.capacity && (
+                            <p className="text-xs text-neutral-400 mt-1">Capacity: {res.properties.capacity}</p>
+                          )}
+                        </div>
+                        <ArrowRight className="w-5 h-5 text-neutral-400" />
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -830,16 +862,33 @@ const BookResource: React.FC = () => {
               <div>
                 <h4 className="font-semibold text-neutral-900 mb-3 flex items-center gap-2">
                   <Clock className="w-5 h-5 text-neutral-500" />
-                  Available Time Slots
+                  Available Time Slots for {selectedResource?.name}
                 </h4>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                   {alternatives.slots.map((slot, idx) => (
-                    <div key={idx} className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-center hover:border-emerald-400 transition-colors cursor-pointer">
-                      <p className="text-sm font-semibold text-emerald-700">{formatTime(slot.start)}</p>
-                      <p className="text-xs text-emerald-600">{formatTime(slot.end)}</p>
+                    <div
+                      key={idx}
+                      className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-center hover:border-emerald-400 hover:bg-emerald-100 transition-colors cursor-pointer"
+                      onClick={() => {
+                        setSelectedSlot(slot)
+                        setShowAlternatives(false)
+                        toast.success('Alternative slot selected!')
+                      }}
+                    >
+                      <p className="text-sm font-semibold text-emerald-700">{formatTime(slot.start_time)}</p>
+                      <div className="flex items-center justify-center gap-1 my-1">
+                        <ArrowRight className="w-3 h-3 text-emerald-500" />
+                      </div>
+                      <p className="text-xs text-emerald-600">{formatTime(slot.end_time)}</p>
                     </div>
                   ))}
                 </div>
+              </div>
+            )}
+            {alternatives.resources.length === 0 && alternatives.slots.length === 0 && (
+              <div className="text-center py-8">
+                <XCircle className="w-12 h-12 text-neutral-300 mx-auto mb-3" />
+                <p className="text-neutral-500">No alternatives available at this time.</p>
               </div>
             )}
           </div>

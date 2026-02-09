@@ -133,7 +133,7 @@ const EmployeeDashboard: React.FC = () => {
         const now = dayjs().tz(IST)
         const start = dayjs.tz(booking.start_time, IST)
 
-        const checkInWindowStart = start.subtract(10, 'minute')
+        const checkInWindowStart = start.subtract(20, 'minute')
         const checkInWindowEnd = start.add(15, 'minute')
 
         return now.isAfter(checkInWindowStart) && now.isBefore(checkInWindowEnd)
